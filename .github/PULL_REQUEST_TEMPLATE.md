@@ -14,6 +14,6 @@
 ## Checklist
 
 - [ ] `bun run lint` passes
-- [ ] `bunx tsc --noEmit` passes
+- [ ] `bun run typecheck` passes
 - [ ] Tested on iOS and Android (or web, if relevant)
 - [ ] No new dependencies added without discussion
