@@ -12,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { APPEARANCE_OPTIONS, useAppearancePreference } from '@/data/appearance';
 import { useMe, useMyFines, useMyGroups } from '@/data/hooks';
 import type { Role } from '@/data/types';
+import { formatDateLong } from '@/lib/dates';
 import { formatFineCount } from '@/lib/fines';
 
 const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', subadmin: 'Subadmin', member: 'Medlem' };
@@ -30,6 +31,24 @@ export default function ProfilScreen() {
             <UserAvatar user={user} className="size-24" />
             <Text variant="h3">{user.name}</Text>
             <Text className="text-muted-foreground">{user.email}</Text>
+            {user.inactiveIn.map((inactive) => (
+              <View
+                key={inactive.groupId}
+                className="bg-muted/60 mt-2 w-full gap-1 rounded-2xl p-4">
+                <View className="flex-row items-center gap-2">
+                  <Badge variant="outline">
+                    <Text>Inaktiv</Text>
+                  </Badge>
+                  <Text className="flex-1 font-medium" numberOfLines={1}>
+                    {inactive.groupName}
+                  </Text>
+                </View>
+                <Text>{inactive.reason}</Text>
+                <Text className="text-muted-foreground text-xs">
+                  Siden {formatDateLong(inactive.since)}
+                </Text>
+              </View>
+            ))}
           </View>
         )}
       </QueryState>

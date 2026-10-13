@@ -113,13 +113,17 @@ model Group {
 }
 
 model Membership {
-  userId   String
-  groupId  String
-  role     Role      @default(member)
+  userId         String
+  groupId        String
+  role           Role      @default(member)
   /// Stillingen i denne gruppen. Settes av sub-/admin.
-  position Position?
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group    Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  position       Position?
+  /// Satt når sub-/admin har gjort medlemmet inaktivt. null = aktivt medlem.
+  inactiveSince  DateTime?
+  /// Begrunnelsen for hvorfor medlemmet er inaktivt. Vises på profilen til medlemmet.
+  inactiveReason String?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group          Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@id([userId, groupId])
 }

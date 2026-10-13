@@ -27,6 +27,7 @@ import type {
   GroupDetails,
   GroupFile,
   Law,
+  Me,
   Message,
   MessagePage,
   Notification,
@@ -44,7 +45,7 @@ import type {
 
 // Spørringer
 
-export const useMe = () => useQuery({ queryKey: ['me'], queryFn: () => api<User>('/me') });
+export const useMe = () => useQuery({ queryKey: ['me'], queryFn: () => api<Me>('/me') });
 
 export const useNotificationSettings = () =>
   useQuery({
@@ -287,6 +288,19 @@ export function useSetPosition(groupId: string) {
     mutationFn: ({ userId, position }: { userId: string; position: Position | null }) =>
       api(`/groups/${groupId}/members/${userId}/position`, { method: 'PUT', body: { position } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups', groupId] }),
+  });
+}
+
+/** (Sub-/admin) Gjør et medlem inaktivt med en begrunnelse, eller aktivt igjen med `null`. */
+export function useSetInactive(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: string | null }) =>
+      api(`/groups/${groupId}/members/${userId}/inactive`, { method: 'PUT', body: { reason } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['me'], exact: true });
+    },
   });
 }
 

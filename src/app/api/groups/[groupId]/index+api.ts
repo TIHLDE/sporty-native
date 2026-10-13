@@ -2,8 +2,10 @@ import type { GroupDetails, UpdateGroupInput } from '@/data/types';
 import { toGroup } from '@/server/dto';
 import {
   HttpError,
+  getRole,
   getUserId,
   handler,
+  isManager,
   readJson,
   requireAccess,
   requireAdminOrParent,
@@ -28,6 +30,11 @@ export const GET = handler<{ groupId: string }>(
       },
     });
 
+    let canSeeReasons = isManager(role);
+    if (!canSeeReasons && group.parentId) {
+      canSeeReasons = isManager(await getRole(userId, group.parentId));
+    }
+
     return {
       ...toGroup(group, role),
       subgroups: group.subgroups.map((s) =>
@@ -38,6 +45,13 @@ export const GET = handler<{ groupId: string }>(
           user: m.user,
           role: m.role,
           position: group.usesPositions ? m.position : null,
+          // Begrunnelsen er bare for sub-/admin og medlemmet selv.
+          inactive: m.inactiveSince
+            ? {
+                since: m.inactiveSince.toISOString(),
+                reason: canSeeReasons || m.userId === userId ? m.inactiveReason : null,
+              }
+            : null,
           subgroupNames: group.subgroups
             .filter((s) => s.memberships.some((sm) => sm.userId === m.userId))
             .map((s) => s.name),

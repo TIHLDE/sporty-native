@@ -36,7 +36,22 @@ function RoleBadge({ member }: { member: Member }) {
   );
 }
 
+function InactiveBadge({ member }: { member: Member }) {
+  if (!member.inactive) return null;
+  return (
+    <Badge variant="outline">
+      <Text>Inaktiv</Text>
+    </Badge>
+  );
+}
+
+/** Begrunnelsen vises bare for dem som får den fra API-et (sub-/admin og medlemmet selv). */
+const inactiveSubtitle = (member: Member) =>
+  member.inactive?.reason ? `Inaktiv: ${member.inactive.reason}` : undefined;
+
+/** Alle medlemmene. Sub-/admin kan trykke på et medlem for å gjøre det inaktivt. */
 function AllMembers({ group }: { group: GroupDetails }) {
+  const manage = isManager(group);
   return (
     <FlatList
       contentInsetAdjustmentBehavior="automatic"
@@ -44,17 +59,36 @@ function AllMembers({ group }: { group: GroupDetails }) {
       data={group.members}
       keyExtractor={(item) => item.user.id}
       ListHeaderComponent={
-        <Text className="text-muted-foreground py-3 text-sm">{group.members.length} medlemmer</Text>
+        <Text className="text-muted-foreground py-3 text-sm">
+          {group.members.length} medlemmer
+          {manage ? ' · trykk på et medlem for å gjøre det inaktivt' : ''}
+        </Text>
       }
       ItemSeparatorComponent={() => <Separator />}
-      renderItem={({ item }) => (
-        <UserRow
-          user={item.user}
-          // Undergruppene medlemmet er med i, i grått under navnet.
-          subtitle={item.subgroupNames.join(' · ') || undefined}
-          right={<RoleBadge member={item} />}
-        />
-      )}
+      renderItem={({ item }) => {
+        const row = (
+          <UserRow
+            user={item.user}
+            // Undergruppene medlemmet er med i, i grått under navnet.
+            subtitle={inactiveSubtitle(item) ?? (item.subgroupNames.join(' · ') || undefined)}
+            right={
+              <View className="flex-row items-center gap-2">
+                <InactiveBadge member={item} />
+                <RoleBadge member={item} />
+                {manage && <Icon as={ChevronRight} size={18} className="text-muted-foreground" />}
+              </View>
+            }
+          />
+        );
+        if (!manage) return row;
+        return (
+          <Link
+            href={{ pathname: '/inaktiv', params: { groupId: group.id, userId: item.user.id } }}
+            asChild>
+            <Pressable className="active:opacity-70">{row}</Pressable>
+          </Link>
+        );
+      }}
     />
   );
 }
@@ -81,7 +115,7 @@ function ByPosition({ group }: { group: GroupDetails }) {
       ListHeaderComponent={
         <Text className="text-muted-foreground pt-3 text-sm">
           {group.members.length} spillere
-          {manage ? ' · trykk på en spiller for å endre stilling' : ''}
+          {manage ? ' · trykk på en spiller for å endre stilling eller gjøre inaktiv' : ''}
         </Text>
       }
       renderSectionHeader={({ section }) => (
@@ -95,8 +129,10 @@ function ByPosition({ group }: { group: GroupDetails }) {
         const row = (
           <UserRow
             user={item.user}
+            subtitle={inactiveSubtitle(item)}
             right={
               <View className="flex-row items-center gap-2">
+                <InactiveBadge member={item} />
                 <RoleBadge member={item} />
                 {manage && <Icon as={ChevronRight} size={18} className="text-muted-foreground" />}
               </View>

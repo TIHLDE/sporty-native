@@ -14,6 +14,18 @@ export interface User {
   email: string;
 }
 
+/** At et medlem er satt som inaktivt i en gruppe, og hvorfor. */
+export interface Inactivity {
+  since: string;
+  /** Begrunnelsen. Bare med for sub-/admin og medlemmet selv, ellers null. */
+  reason: string | null;
+}
+
+/** Den innloggede brukeren, med gruppene der hen er satt som inaktiv. */
+export interface Me extends User {
+  inactiveIn: (Inactivity & { groupId: string; groupName: string; reason: string })[];
+}
+
 /** Hvilke push-varsler og påminnelser brukeren vil ha. Lagres på brukeren i databasen. */
 export interface NotificationSettings {
   /** Hovedbryteren. Når den er av, sendes ingen varsler uansett de andre valgene. */
@@ -43,6 +55,8 @@ export interface Member {
   role: Role;
   /** Bare satt i grupper med usesPositions. */
   position: Position | null;
+  /** Satt hvis sub-/admin har gjort medlemmet inaktivt i gruppen. */
+  inactive: Inactivity | null;
   /** Undergruppene medlemmet er med i, f.eks. ["Herrer 11'er"]. Tom i undergrupper. */
   subgroupNames: string[];
 }

@@ -85,7 +85,17 @@ export default function RootLayout() {
                 sheetGrabberVisible: true,
               }}
             />
-            <Stack.Screen name="gi-bot" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen
+              name="inaktiv"
+              options={{
+                // Egen tittel i innholdet, se "opprett".
+                headerShown: false,
+                presentation: 'formSheet',
+                sheetAllowedDetents: 'fitToContents',
+                sheetGrabberVisible: true,
+              }}
+            />
+            <Stack.Screen name="gi-bot"options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen
               name="nytt-arrangement"
               options={{ presentation: 'modal', headerShown: false }}

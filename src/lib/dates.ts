@@ -5,6 +5,11 @@ const weekdayLong = new Intl.DateTimeFormat(LOCALE, { weekday: 'long' });
 const weekdayShort = new Intl.DateTimeFormat(LOCALE, { weekday: 'short' });
 const dayMonth = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short' });
 const dayMonthLong = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long' });
+const dayMonthYear = new Intl.DateTimeFormat(LOCALE, {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
 const time = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' });
 
 /** "NOV" */
@@ -41,6 +46,11 @@ export function formatEventRange(startIso: string, endIso: string | null) {
 /** "tor. 22. okt. kl. 18:00", kort format for skjemafelt. */
 export function formatDateTimeShort(date: Date) {
   return `${weekdayShort.format(date)} ${dayMonth.format(date)} kl. ${time.format(date)}`;
+}
+
+/** "13. oktober 2026" */
+export function formatDateLong(iso: string) {
+  return dayMonthYear.format(new Date(iso));
 }
 
 /** "nå", "for 5 min siden", "i går", "12. okt." */

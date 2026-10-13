@@ -64,6 +64,7 @@ Kopier denne blokken til toppen av listen under, og ta bare med kategoriene som 
 - **Stemming**: ett trykk ved ett valg, eller velg flere og «Lagre stemme». Stemmen kan endres eller fjernes frem til fristen. Skjulte resultater vises for medlemmer først etter fristen, sub-/admin ser dem hele tiden
 - **Kommentarer** på avstemninger, med samme kommentarfelt som kunngjøringer
 - **Stillinger** (Keeper, Back, Midtstopper, Midtbane, Ving, Spiss) slås på per gruppe (`usesPositions`), foreløpig for Herrer 11'er. Medlemmer-siden grupperes etter stilling, og sub-/admin setter stillingen ved å trykke på en spiller
+- **Inaktive medlemmer** (sub-/admin): trykk på et medlem under Medlemmer (eller «Gjør inaktiv» i stillingsarket) og skriv en begrunnelse. Lagres per gruppe på medlemskapet (`inactiveSince`, `inactiveReason`). Alle ser «Inaktiv»-merket, men bare medlemmet selv og sub-/admin ser begrunnelsen. Medlemmet ser den på profilen sin. Kan gjøres aktiv igjen fra samme ark
 - **Database**: PostgreSQL i Docker (`docker-compose.yml`, port 5433) med Prisma 7 (`prisma/schema.prisma`), migreringer og seed-data
 - **API**: Expo Router API-ruter i `src/app/api/` med tilgangssjekk på serveren. Appen henter data med React Query (`src/data/hooks.ts`)
 - **Dev-innlogging**: Profil → Utvikling → Bytt bruker, for å teste som admin, subadmin eller medlem

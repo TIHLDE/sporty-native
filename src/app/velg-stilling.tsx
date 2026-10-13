@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Check } from 'lucide-react-native';
+import { Check, ChevronRight } from 'lucide-react-native';
 import { Alert, Pressable, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
@@ -53,6 +53,24 @@ export default function VelgStillingScreen() {
           </View>
         );
       })}
+
+      <View className="pt-4">
+        <Pressable
+          onPress={() => router.replace({ pathname: '/inaktiv', params: { groupId, userId } })}
+          className="bg-muted/60 flex-row items-center gap-3 rounded-2xl px-4 py-3.5 active:opacity-70">
+          <View className="flex-1">
+            <Text className="font-medium">
+              {member?.inactive ? 'Inaktivt medlem' : 'Gjør inaktiv'}
+            </Text>
+            {member?.inactive?.reason && (
+              <Text className="text-muted-foreground text-sm" numberOfLines={2}>
+                {member.inactive.reason}
+              </Text>
+            )}
+          </View>
+          <Icon as={ChevronRight} size={18} className="text-muted-foreground" />
+        </Pressable>
+      </View>
     </View>
   );
 }
