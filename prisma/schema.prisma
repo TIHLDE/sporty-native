@@ -1,0 +1,431 @@
+// Datamodellen for Sporty. Brukes av API-et, som både appen og (senere) nettsiden snakker med.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/server/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  admin
+  subadmin
+  member
+}
+
+/// Stilling på banen. Brukes i grupper med usesPositions (f.eks. 11'er).
+enum Position {
+  keeper
+  back
+  midtstopper
+  midtbane
+  ving
+  spiss
+}
+
+enum AttendanceStatus {
+  kommer
+  kommer_ikke
+}
+
+enum EventType {
+  trening
+  kamp
+  sosialt
+  annet
+}
+
+enum UploadKind {
+  image
+  video
+  file
+}
+
+enum FileKind {
+  pdf
+  image
+  document
+}
+
+enum NotificationType {
+  event
+  attendance
+  fine
+  announcement
+  poll
+  payment
+}
+
+model User {
+  id    String @id @default(cuid())
+  name  String
+  email String @unique
+
+  memberships          Membership[]
+  attendances          Attendance[]
+  announcements        Announcement[]
+  pollVotes            PollVote[]
+  fines                Fine[]                @relation("FineReceiver")
+  givenFines           Fine[]                @relation("FineGiver")
+  paymentRequests      PaymentRequest[]
+  paymentConfirmations PaymentConfirmation[]
+  createdEvents        Event[]               @relation("EventCreator")
+  uploads              Upload[]
+  announcementComments AnnouncementComment[]
+  createdPolls         Poll[]                @relation("PollCreator")
+  pollComments         PollComment[]
+  notifications        Notification[]
+  conversations        ConversationMember[]
+  messages             Message[]
+  pushTokens           PushToken[]
+  notificationSettings NotificationSettings?
+}
+
+model Group {
+  id            String  @id @default(cuid())
+  name          String
+  /// Hex-farge som brukes til logo og banner.
+  color         String
+  description   String  @default("")
+  /// Om medlemmene har stillinger (keeper, back, ...). Slås på per gruppe, f.eks. 11'er.
+  usesPositions Boolean @default(false)
+  /// Forsidebilde i banneret. Uten bilde brukes gruppefargen.
+  coverUploadId String?
+  coverUpload   Upload? @relation("GroupCover", fields: [coverUploadId], references: [id], onDelete: SetNull)
+  parentId      String?
+  parent        Group?  @relation("Subgroups", fields: [parentId], references: [id], onDelete: Cascade)
+  subgroups     Group[] @relation("Subgroups")
+
+  memberships     Membership[]
+  events          Event[]
+  announcements   Announcement[]
+  polls           Poll[]
+  laws            Law[]
+  fines           Fine[]
+  paymentRequests PaymentRequest[]
+  files           GroupFile[]
+  notifications   Notification[]
+  conversation    Conversation?
+  places          Place[]
+}
+
+model Membership {
+  userId   String
+  groupId  String
+  role     Role      @default(member)
+  /// Stillingen i denne gruppen. Settes av sub-/admin.
+  position Position?
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group    Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, groupId])
+}
+
+model Event {
+  id             String    @id @default(cuid())
+  groupId        String
+  group          Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdById    String?
+  createdBy      User?     @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  title          String
+  type           EventType @default(annet)
+  /// Laget man spiller mot. Bare for kamper.
+  opponent       String?
+  /// Notat med ekstra informasjon om arrangementet.
+  description    String    @default("")
+  locationName   String
+  latitude       Float
+  longitude      Float
+  startsAt       DateTime
+  /// Valgfri. Uten sluttid regnes arrangementet som ferdig når det starter.
+  endsAt         DateTime?
+  /// Resultat for kamper: egne mål og motstanderens mål. Registreres av sub-/admin.
+  ourScore       Int?
+  theirScore     Int?
+  /// Valgfri. Etter fristen kan man ikke lenger svare på arrangementet.
+  signupDeadline DateTime?
+
+  attendances Attendance[]
+  fines       Fine[]
+
+  @@index([groupId, startsAt])
+}
+
+/// Svar på et arrangement. Medlemmer uten rad her har ikke svart.
+model Attendance {
+  eventId   String
+  userId    String
+  status    AttendanceStatus
+  updatedAt DateTime         @updatedAt
+  event     Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+}
+
+model Announcement {
+  id            String                @id @default(cuid())
+  groupId       String
+  authorId      String
+  title         String
+  body          String
+  allowComments Boolean               @default(true)
+  createdAt     DateTime              @default(now())
+  group         Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  author        User                  @relation(fields: [authorId], references: [id])
+  /// Bilder, video og vedlegg.
+  uploads       Upload[]
+  comments      AnnouncementComment[]
+}
+
+model AnnouncementComment {
+  id             String       @id @default(cuid())
+  announcementId String
+  authorId       String
+  body           String
+  createdAt      DateTime     @default(now())
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([announcementId, createdAt])
+}
+
+/// En opplastet fil. Selve filen ligger på disk (storage/uploads/<id>), raden beskriver den.
+/// Knyttes til en kunngjøring når den publiseres. Kan senere brukes til bilder på bøter o.l.
+model Upload {
+  id             String        @id @default(cuid())
+  kind           UploadKind
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  /// Rekkefølge i kunngjøringen.
+  position       Int           @default(0)
+  uploadedById   String
+  announcementId String?
+  createdAt      DateTime      @default(now())
+  uploadedBy     User          @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  announcement   Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  coverForGroups Group[]       @relation("GroupCover")
+}
+
+model Poll {
+  id            String        @id @default(cuid())
+  groupId       String
+  createdById   String?
+  question      String
+  description   String        @default("")
+  /// Om man kan stemme på flere alternativer.
+  allowMultiple Boolean       @default(false)
+  /// Skjul resultatet for medlemmene til fristen har gått ut. Sub-/admin ser det alltid.
+  hideVotes     Boolean       @default(false)
+  allowComments Boolean       @default(true)
+  closesAt      DateTime
+  createdAt     DateTime      @default(now())
+  group         Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy     User?         @relation("PollCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  options       PollOption[]
+  votes         PollVote[]
+  comments      PollComment[]
+}
+
+model PollComment {
+  id        String   @id @default(cuid())
+  pollId    String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([pollId, createdAt])
+}
+
+model PollOption {
+  id       String     @id @default(cuid())
+  pollId   String
+  label    String
+  position Int
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes    PollVote[]
+}
+
+/// En stemme på ett alternativ. Uten flervalg har hver bruker maks én rad per avstemning.
+model PollVote {
+  pollId   String
+  optionId String
+  userId   String
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([optionId, userId])
+  @@index([pollId, userId])
+}
+
+/// En paragraf i gruppens botregler, f.eks. "§1.00 Oppmøte".
+model Law {
+  id          String @id @default(cuid())
+  groupId     String
+  paragraph   String
+  title       String
+  description String @default("")
+  group       Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fines       Fine[]
+
+  @@unique([groupId, paragraph])
+}
+
+model Fine {
+  id         String   @id @default(cuid())
+  groupId    String
+  lawId      String
+  userId     String
+  givenById  String
+  reason     String
+  /// Antall bøter. Bøter telles, de har ikke et kronebeløp.
+  count      Int      @default(1)
+  imageUri   String?
+  paid       Boolean  @default(false)
+  /// Fellesbot gitt til alle som ikke svarte på et arrangement.
+  collective Boolean  @default(false)
+  eventId    String?
+  createdAt  DateTime @default(now())
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  law        Law      @relation(fields: [lawId], references: [id])
+  user       User     @relation("FineReceiver", fields: [userId], references: [id], onDelete: Cascade)
+  givenBy    User     @relation("FineGiver", fields: [givenById], references: [id])
+  event      Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, createdAt])
+}
+
+/// Betalingsoppfordring postet av sub-/admin. Selve betalingen skjer utenfor appen (Vipps e.l.).
+model PaymentRequest {
+  id            String                @id @default(cuid())
+  groupId       String
+  createdById   String
+  title         String
+  description   String                @default("")
+  amount        Int
+  vippsNumber   String
+  dueDate       DateTime
+  createdAt     DateTime              @default(now())
+  group         Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy     User                  @relation(fields: [createdById], references: [id])
+  confirmations PaymentConfirmation[]
+}
+
+/// Medlemmet har selv markert at det har betalt.
+model PaymentConfirmation {
+  paymentId String
+  userId    String
+  createdAt DateTime       @default(now())
+  payment   PaymentRequest @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([paymentId, userId])
+}
+
+/// Steder som foreslås når sub-/admin lager arrangementer. groupId = null er felles for alle.
+model Place {
+  id         String   @id @default(cuid())
+  groupId    String?
+  name       String
+  address    String   @default("")
+  latitude   Float
+  longitude  Float
+  lastUsedAt DateTime @default(now())
+  group      Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, lastUsedAt])
+}
+
+model GroupFile {
+  id         String   @id @default(cuid())
+  groupId    String
+  name       String
+  kind       FileKind
+  sizeKb     Int
+  uploadedAt DateTime @default(now())
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  /// Mottakeren av varselet.
+  userId    String
+  groupId   String?
+  type      NotificationType
+  text      String
+  href      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+/// En samtale: enten gruppechatten til en gruppe (groupId satt, alle medlemmer i gruppen har
+/// tilgang) eller en direktemelding mellom to personer (groupId null, to ConversationMember-rader).
+model Conversation {
+  id        String               @id @default(cuid())
+  /// Brukes bare som reserve. Gruppechatter vises med gruppenavnet, direktemeldinger med navnet
+  /// til den andre personen.
+  title     String               @default("")
+  /// Maks én gruppechat per gruppe.
+  groupId   String?              @unique
+  createdAt DateTime             @default(now())
+  group     Group?               @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  members   ConversationMember[]
+  messages  Message[]
+}
+
+/// Deltaker i en samtale. For gruppechatter lages raden første gang man åpner chatten, og brukes
+/// bare til lest-status. For direktemeldinger avgjør radene hvem som har tilgang.
+model ConversationMember {
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  sentAt         DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, sentAt])
+}
+
+/// Expo push-token for en enhet. Én enhet hører til én bruker om gangen (siste som logget inn).
+model PushToken {
+  token     String   @id
+  userId    String
+  platform  String
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Varselinnstillinger. Raden lages første gang de endres; mangler den, gjelder standardverdiene.
+model NotificationSettings {
+  userId              String  @id
+  /// Hovedbryteren. De andre gjelder bare når den er på.
+  pushEnabled         Boolean @default(true)
+  pushFines           Boolean @default(true)
+  pushEventReminders  Boolean @default(true)
+  pushSignupReminders Boolean @default(true)
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
