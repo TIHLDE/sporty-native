@@ -60,7 +60,15 @@ function PushSection() {
   return (
     <View className="gap-2">
       <SectionTitle>Pushvarsler</SectionTitle>
-      {permission !== 'granted' && <PermissionNotice denied={permission === 'denied'} />}
+      {permission === 'unsupported' ? (
+        <View className="bg-muted/60 rounded-2xl p-4">
+          <Text className="text-sm">
+            Varsler virker ikke i Expo Go på Android. Valgene under lagres likevel.
+          </Text>
+        </View>
+      ) : (
+        permission !== 'granted' && <PermissionNotice denied={permission === 'denied'} />
+      )}
       <QueryState query={settings}>
         {(data) => {
           const subDisabled = !data.pushEnabled;

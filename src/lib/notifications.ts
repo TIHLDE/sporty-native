@@ -1,8 +1,11 @@
 // Varsler på telefonen: tillatelse, push-token (bøter sendes fra serveren) og lokale påminnelser
-// før arrangementer, som planlegges på enheten og derfor også virker i Expo Go.
+// før arrangementer, som planlegges på enheten og derfor også virker i Expo Go på iOS.
 
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import * as Notifications from 'expo-notifications';
+import type {
+  NotificationContentInput,
+  NotificationPermissionsStatus,
+} from 'expo-notifications';
 import { useSyncExternalStore } from 'react';
 import { AppState, Platform } from 'react-native';
 
@@ -16,6 +19,21 @@ import {
   type NotificationContent,
 } from './notification-content';
 
+/**
+ * Expo Go på Android har ikke expo-notifications, og modulen kaster en feil allerede når den
+ * importeres. Der lastes den ikke i det hele tatt, og alle varselfunksjonene under gjør ingenting.
+ */
+export const notificationsSupported = !(
+  Platform.OS === 'android' && Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+);
+
+/** expo-notifications, eller null der varsler ikke støttes. Bruk denne i stedet for å importere modulen. */
+export const Notifications: typeof import('expo-notifications') | null = notificationsSupported
+  ? // Må være require: en vanlig import lastes alltid, også der modulen kaster en feil.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('expo-notifications')
+  : null;
+
 const CHANNEL_ID = 'default';
 /** Alle påminnelser får id med dette prefikset, så de kan byttes ut uten å røre andre varsler. */
 const REMINDER_PREFIX = 'reminder:';
@@ -23,7 +41,7 @@ const REMINDER_PREFIX = 'reminder:';
 const MAX_REMINDERS = 60;
 
 // Vis varsler også når appen er åpen.
-Notifications.setNotificationHandler({
+Notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
     shouldSetBadge: false,
@@ -32,13 +50,16 @@ Notifications.setNotificationHandler({
   }),
 });
 
-/** Om telefonen tillater varsler fra appen. 'undetermined' betyr at vi ikke har spurt ennå. */
-export type NotificationPermission = 'undetermined' | 'granted' | 'denied';
+/**
+ * Om telefonen tillater varsler fra appen. 'undetermined' betyr at vi ikke har spurt ennå, og
+ * 'unsupported' at varsler ikke finnes der appen kjører (Expo Go på Android).
+ */
+export type NotificationPermission = 'undetermined' | 'granted' | 'denied' | 'unsupported';
 
-let permission: NotificationPermission = 'undetermined';
+let permission: NotificationPermission = notificationsSupported ? 'undetermined' : 'unsupported';
 const permissionListeners = new Set<() => void>();
 
-function setPermission(response: Notifications.NotificationPermissionsStatus) {
+function setPermission(response: NotificationPermissionsStatus) {
   permission = response.granted ? 'granted' : response.canAskAgain ? 'undetermined' : 'denied';
   permissionListeners.forEach((listener) => listener());
   return response.granted;
@@ -46,6 +67,7 @@ function setPermission(response: Notifications.NotificationPermissionsStatus) {
 
 /** Spør om tillatelse (én gang) og lager Android-kanalen. Returnerer om varsler er tillatt. */
 export async function ensureNotificationPermission() {
+  if (!Notifications) return false;
   if (Platform.OS === 'android') {
     // Android 13+ viser ikke tillatelsesdialogen før en kanal finnes.
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
@@ -60,7 +82,7 @@ export async function ensureNotificationPermission() {
 
 // Brukeren kan ha endret tillatelsen i innstillingene på telefonen mens appen var i bakgrunnen.
 AppState.addEventListener('change', (state) => {
-  if (state === 'active') Notifications.getPermissionsAsync().then(setPermission);
+  if (state === 'active') Notifications?.getPermissionsAsync().then(setPermission);
 });
 
 export function useNotificationPermission() {
@@ -78,8 +100,7 @@ export function useNotificationPermission() {
  * Krever et EAS-prosjekt (extra.eas.projectId), og på Android en development build.
  */
 export async function registerPushToken() {
-  const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-  if (Platform.OS === 'android' && isExpoGo) return null;
+  if (!Notifications) return null;
   const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
   if (!projectId) {
     if (__DEV__)
@@ -155,6 +176,7 @@ export function buildReminders(
 
 /** Bytter ut alle planlagte påminnelser med de som gjelder nå (kalles når arrangementene endres). */
 export async function syncReminders(events: Event[], userId: string, options: ReminderOptions) {
+  if (!Notifications) return;
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(
     scheduled
@@ -179,6 +201,7 @@ export async function syncReminders(events: Event[], userId: string, options: Re
 
 /** Planlagte påminnelser, nærmeste først. Brukes av dev-skjermen. */
 export async function getScheduledReminders() {
+  if (!Notifications) return [];
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   return scheduled
     .filter((n) => n.identifier.startsWith(REMINDER_PREFIX))
@@ -192,7 +215,8 @@ export async function getScheduledReminders() {
 }
 
 /** Viser et varsel om `delaySeconds` sekunder. Brukes av dev-skjermen. */
-export function showNotification(content: NotificationContent, delaySeconds = 0) {
+export async function showNotification(content: NotificationContent, delaySeconds = 0) {
+  if (!Notifications) throw new Error('Varsler virker ikke i Expo Go på Android.');
   return Notifications.scheduleNotificationAsync({
     content: toNotificationContent(content),
     trigger:
@@ -206,9 +230,7 @@ export function showNotification(content: NotificationContent, delaySeconds = 0)
   });
 }
 
-function toNotificationContent(
-  content: NotificationContent
-): Notifications.NotificationContentInput {
+function toNotificationContent(content: NotificationContent): NotificationContentInput {
   return {
     title: content.title,
     body: content.body,

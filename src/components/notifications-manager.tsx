@@ -1,4 +1,4 @@
-import * as Notifications from 'expo-notifications';
+import type { Notification } from 'expo-notifications';
 import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
 
@@ -7,6 +7,7 @@ import { useNotificationSettings, useUpcomingEvents } from '@/data/hooks';
 import { useSession } from '@/data/session';
 import { syncCalendar } from '@/lib/calendar-sync';
 import {
+  Notifications,
   ensureNotificationPermission,
   registerPushToken,
   syncReminders,
@@ -57,7 +58,8 @@ export function NotificationsManager() {
 /** Åpner skjermen i varselets `data.url`, også når appen ble startet ved å trykke på varselet. */
 function useNotificationObserver() {
   useEffect(() => {
-    const redirect = (notification: Notifications.Notification) => {
+    if (!Notifications) return;
+    const redirect = (notification: Notification) => {
       const url = notification.request.content.data?.url;
       if (typeof url === 'string') router.push(url as Href);
     };
