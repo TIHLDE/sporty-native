@@ -153,11 +153,27 @@ export const useFiles = (groupId: string) =>
     queryFn: () => api<GroupFile[]>(`/groups/${groupId}/files`),
   });
 
+/** Så mange varsler gir API-et om gangen. En full side betyr at det kan finnes eldre. */
+const NOTIFICATION_PAGE_SIZE = 100;
+
+/**
+ * Varslene, nyeste først. Leste varsler blir liggende, så `fetchNextPage` blar bakover i hele
+ * historikken.
+ */
 export const useNotifications = (groupId?: string) =>
-  useQuery({
+  useInfiniteQuery({
     queryKey: ['notifications', groupId ?? 'all'],
-    queryFn: () =>
-      api<Notification[]>(groupId ? `/notifications?groupId=${groupId}` : '/notifications'),
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams();
+      if (groupId) params.set('groupId', groupId);
+      if (pageParam) params.set('cursor', pageParam);
+      const search = params.toString();
+      return api<Notification[]>(`/notifications${search ? `?${search}` : ''}`);
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (page) =>
+      page.length === NOTIFICATION_PAGE_SIZE ? (page.at(-1)?.id ?? null) : null,
+    select: (data) => data.pages.flat(),
   });
 
 export const useConversations = () =>

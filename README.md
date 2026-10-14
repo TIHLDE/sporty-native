@@ -1,56 +1,58 @@
-# Welcome to your Expo app 👋
+# Sporty Native
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Mobilappen til Sporty, for TIHLDE sine idrettslag. Backend og database er **Sporty v3**, som både appen og nettsiden bruker. Denne repoen inneholder bare appen.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- Expo (React Native)
+  - Expo Router
+  - NativeWind (Tailwind)
+  - React Native Reusables (shadcn-komponenter)
+- TanStack Query
+- Innlogging med TIHLDE (Photon, OAuth)
+- ESLint + Prettier
+- Bun
 
+Backend (API, database, synk med tihlde.org, push) ligger i Sporty v3.
+
+## Kom i gang
+
+1. Start Sporty v3 (backend og database). I Sporty v3-mappen:
    ```bash
-   npm install
+   bun run dev
+   ```
+   Første gang: kopier `.env.example` til `.env` der, og fyll inn testdata med `bun run db:seed`.
+2. Kopier `.env.example` til `.env` her, og fyll inn `EXPO_PUBLIC_PHOTON_CLIENT_ID` (klienten «Sporty Native» på tihlde.org).
+3. Installer og start appen:
+   ```bash
+   bun install
+   bunx expo start --tunnel
    ```
 
-2. Start the app
+I utvikling sender Expo-dev-serveren alle `/api`-forespørsler videre til Sporty v3 (`SPORTY_API_URL`, standard `http://localhost:3001`), så telefonen bare trenger å nå Expo-serveren. I ferdige builds peker `EXPO_PUBLIC_API_URL` rett på Sporty v3.
 
-   ```bash
-   npx expo start
-   ```
+## Struktur
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+sporty-native/
+├── src/
+│   ├── app/               # Skjermer og ruter (Expo Router)
+│   │   ├── (tabs)/        # Fanene: Hjem, Varsler, Grupper, Meldinger, Profil
+│   │   └── api/           # Kun i utvikling: sender /api videre til Sporty v3
+│   ├── components/
+│   │   ├── ui/            # Delte shadcn-komponenter (React Native Reusables)
+│   │   └── sporty/        # Sporty-komponenter (kort, rader, banner …)
+│   ├── data/              # Typer, React Query-hooks og innlogging
+│   └── lib/               # Hjelpere (API-klient, TIHLDE-innlogging, varsler, datoer)
+└── assets/                # Ikoner, bilder og splash
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Kommandoer
 
-### Other setup steps
+| Kommando | Hva den gjør |
+|---|---|
+| `bunx expo start --tunnel` | Starter appen (tunnel trengs på f.eks. eduroam) |
+| `bun run lint` | ESLint |
+| `bun run typecheck` | TypeScript |
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Når du stopper dev-serveren, vent noen sekunder før du starter den igjen, ellers får tunnelen ny adresse, og den nye adressen må legges til som redirect URI på tihlde.org (den står nederst på innloggingsskjermen).

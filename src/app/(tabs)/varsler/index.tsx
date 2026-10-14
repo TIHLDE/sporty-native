@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { FlatList, Pressable, RefreshControl } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl } from 'react-native';
 
 import { EmptyState } from '@/components/sporty/empty-state';
 import { NotificationRow } from '@/components/sporty/notification-row';
@@ -34,6 +34,12 @@ export default function VarslerScreen() {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => <NotificationRow notification={item} />}
             ItemSeparatorComponent={() => <Separator />}
+            // Leste varsler blir liggende. Eldre hentes når man ruller til bunnen.
+            onEndReached={() => notifications.hasNextPage && notifications.fetchNextPage()}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={
+              notifications.isFetchingNextPage ? <ActivityIndicator className="py-4" /> : null
+            }
             ListEmptyComponent={<EmptyState text="Ingen varsler ennå" />}
             refreshControl={
               <RefreshControl refreshing={notifications.isRefetching} onRefresh={notifications.refetch} />

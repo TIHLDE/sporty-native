@@ -28,6 +28,20 @@ Kopier denne blokken til toppen av listen under, og ta bare med kategoriene som 
 
 ---
 
+## 2026-10-14 (backend flyttet til Sporty v3)
+
+### ♻️ Endret
+
+- **Varselloggen beholdes for alltid**: Varsler-skjermene henter eldre varsler når du ruller til bunnen, i stedet for å stoppe ved de 100 nyeste. Leste varsler blir liggende
+- **Backend flyttet til Sporty v3**: API-et, databasen, synken med tihlde.org, bøter og push ligger nå i Sporty v3, som både appen og nettsiden bruker. API-et har de samme stiene og svarene, så appen er uendret bortsett fra adressen. Seed-dataene ligger også der (`bun run db:seed` i Sporty v3)
+- **I utvikling** sender Expo-dev-serveren alle `/api`-forespørsler videre til Sporty v3 (`SPORTY_API_URL`, standard `http://localhost:3001`), så telefonen fortsatt bare trenger å nå Expo-serveren (også via tunnel). I ferdige builds peker `EXPO_PUBLIC_API_URL` rett på Sporty v3
+- README beskriver nå Sporty Native i stedet for Expo-malen
+
+### 🗑️ Fjernet
+
+- Appens egen server (`src/app/api/*`, `src/server`), Prisma-skjemaet, migreringene, seed-skriptet og Docker-databasen (`docker-compose.yml`). Alt er flyttet til Sporty v3, og ligger i git-historikken her
+- Avhengighetene som bare backend trengte: Prisma, `pg`, `jose`, `dotenv` og `tsx`, og `db:*`-skriptene
+
 ## 2026-10-14
 
 ### ✨ Feature
