@@ -6,37 +6,41 @@ import { Icon } from '@/components/ui/icon';
 import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { useGroup, useSetPosition } from '@/data/hooks';
-import type { Position } from '@/data/types';
-import { POSITIONS } from '@/lib/positions';
 
-/** (Sub-/admin) Velg stilling for en spiller. */
+/** (Sub-/admin) Velg posisjon for en spiller, fra gruppens egen posisjonsliste. */
 export default function VelgStillingScreen() {
   const { groupId, userId } = useLocalSearchParams<{ groupId: string; userId: string }>();
-  const member = useGroup(groupId).data?.members.find((m) => m.user.id === userId);
+  const group = useGroup(groupId).data;
+  const member = group?.members.find((m) => m.user.id === userId);
   const setPosition = useSetPosition(groupId);
 
-  const choose = (position: Position | null) =>
+  const choose = (positionId: string | null) =>
     setPosition.mutate(
-      { userId, position },
+      { userId, positionId },
       {
         onSuccess: () => router.back(),
         onError: (error) => Alert.alert('Kunne ikke lagre stilling', error.message),
       }
     );
 
-  const options: { value: Position | null; label: string }[] = [
-    ...POSITIONS,
-    { value: null, label: 'Ingen stilling' },
+  const options: { value: string | null; label: string }[] = [
+    ...(group?.positions ?? []).map((p) => ({ value: p.id, label: p.name })),
+    { value: null, label: 'Ingen posisjon' },
   ];
 
   return (
     <View className="px-4 pb-6 pt-6">
-      <Text variant="h4">Stilling</Text>
+      <Text variant="h4">Posisjon</Text>
       {member && <Text className="text-muted-foreground pb-2 text-sm">{member.user.name}</Text>}
+      {group?.positions.length === 0 && (
+        <Text className="text-muted-foreground py-2 text-sm">
+          Gruppen har ingen posisjoner ennå. Admin legger dem til under Innstillinger → Posisjoner.
+        </Text>
+      )}
       {options.map((option, index) => {
-        const selected = (member?.position ?? null) === option.value;
+        const selected = (member?.position?.id ?? null) === option.value;
         return (
-          <View key={option.label}>
+          <View key={option.value ?? 'none'}>
             {index > 0 && <Separator />}
             <Pressable
               disabled={setPosition.isPending}

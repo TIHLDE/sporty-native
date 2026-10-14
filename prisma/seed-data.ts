@@ -5,12 +5,17 @@ import { daysFromNow, hoursFromNow } from "../src/lib/dates";
 
 type Role = "admin" | "subadmin" | "member";
 type Answer = "kommer" | "kommer_ikke";
-type Position = "keeper" | "back" | "midtstopper" | "midtbane" | "ving" | "spiss";
 
 interface User {
   id: string;
   name: string;
   email: string;
+}
+interface GroupPosition {
+  id: string;
+  groupId: string;
+  name: string;
+  sortOrder: number;
 }
 interface Group {
   id: string;
@@ -24,7 +29,7 @@ interface Membership {
   userId: string;
   groupId: string;
   role: Role;
-  position?: Position;
+  positionId?: string;
 }
 interface Law {
   id: string;
@@ -181,6 +186,21 @@ export const groups: Group[] = [
   },
 ];
 
+// 11'er har fotballposisjoner. Andre grupper kan få sine egne i appen.
+export const positions: GroupPosition[] = [
+  "Keeper",
+  "Back",
+  "Midtstopper",
+  "Midtbane",
+  "Ving",
+  "Spiss",
+].map((name, sortOrder) => ({
+  id: `herrer-11-${name.toLowerCase()}`,
+  groupId: "herrer-11",
+  name,
+  sortOrder,
+}));
+
 const member = (userId: string, groupId: string): Membership => ({
   userId,
   groupId,
@@ -192,11 +212,11 @@ export const memberships: Membership[] = [
   { userId: "u3", groupId: "herrer", role: "subadmin" },
   ...["u5", "u7", "u9", "u11"].map((id) => member(id, "herrer")),
 
-  // 11'er har stillinger.
-  { userId: "u1", groupId: "herrer-11", role: "admin", position: "midtbane" },
-  { userId: "u3", groupId: "herrer-11", role: "member", position: "midtstopper" },
-  { userId: "u5", groupId: "herrer-11", role: "member", position: "spiss" },
-  { userId: "u7", groupId: "herrer-11", role: "member", position: "keeper" },
+  // 11'er har posisjoner.
+  { userId: "u1", groupId: "herrer-11", role: "admin", positionId: "herrer-11-midtbane" },
+  { userId: "u3", groupId: "herrer-11", role: "member", positionId: "herrer-11-midtstopper" },
+  { userId: "u5", groupId: "herrer-11", role: "member", positionId: "herrer-11-spiss" },
+  { userId: "u7", groupId: "herrer-11", role: "member", positionId: "herrer-11-keeper" },
   { userId: "u9", groupId: "herrer-7", role: "admin" },
   member("u11", "herrer-7"),
 

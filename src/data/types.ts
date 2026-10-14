@@ -3,7 +3,11 @@
 
 export type Role = 'admin' | 'subadmin' | 'member';
 
-export type Position = 'keeper' | 'back' | 'midtstopper' | 'midtbane' | 'ving' | 'spiss';
+/** En posisjon i en gruppe, f.eks. Keeper eller Kant. Hver gruppe har sin egen liste. */
+export interface GroupPosition {
+  id: string;
+  name: string;
+}
 
 export type Answer = 'kommer' | 'kommer_ikke';
 export type AttendanceStatus = Answer | 'ubesvart';
@@ -11,7 +15,8 @@ export type AttendanceStatus = Answer | 'ubesvart';
 export interface User {
   id: string;
   name: string;
-  email: string;
+  /** Null for medlemmer hentet fra en medlemsliste på tihlde.org som ikke har logget inn ennå. */
+  email: string | null;
 }
 
 /** At et medlem er satt som inaktivt i en gruppe, og hvorfor. */
@@ -42,10 +47,12 @@ export interface Group {
   color: string;
   description: string;
   parentId: string | null;
-  /** Om medlemmene har stillinger (keeper, back, ...), f.eks. på 11'er. */
+  /** Om medlemmene har posisjoner. Listen lager admin selv (GroupDetails.positions). */
   usesPositions: boolean;
   /** Relativ URL til forsidebildet, eller null (da brukes gruppefargen). */
   coverUrl: string | null;
+  /** Logoen fra tihlde.org (full lenke), eller null. Vises som gruppebilde. */
+  logoUrl: string | null;
   /** Den innloggede brukerens rolle i gruppen. */
   myRole: Role | null;
 }
@@ -54,7 +61,7 @@ export interface Member {
   user: User;
   role: Role;
   /** Bare satt i grupper med usesPositions. */
-  position: Position | null;
+  position: GroupPosition | null;
   /** Satt hvis sub-/admin har gjort medlemmet inaktivt i gruppen. */
   inactive: Inactivity | null;
   /** Undergruppene medlemmet er med i, f.eks. ["Herrer 11'er"]. Tom i undergrupper. */
@@ -64,6 +71,25 @@ export interface Member {
 export interface GroupDetails extends Group {
   subgroups: Group[];
   members: Member[];
+  /** Gruppens posisjoner i rekkefølge. Vises bare når usesPositions er på. */
+  positions: GroupPosition[];
+  /** Sub-/admin i gruppen, eller i hovedgruppen hvis det er en undergruppe. */
+  canManage: boolean;
+  /** Admin i gruppen, eller i hovedgruppen hvis det er en undergruppe. */
+  canAdmin: boolean;
+  /** Bøtene til (hoved)gruppen. */
+  fines: GroupFinesInfo;
+}
+
+export interface GroupFinesInfo {
+  /** tihlde.org for lag derfra (da er tihlde.org kilden), ellers Sporty sitt eget botsystem. */
+  source: 'tihlde' | 'sporty';
+  /** For lag fra tihlde.org: om bøter er slått på der. Alltid true for Sporty-grupper. */
+  activated: boolean;
+  /** Kan gi bøter: alle medlemmer på tihlde.org, sub-/admin i Sporty-grupper. */
+  canGive: boolean;
+  /** Kan godkjenne, markere som betalt og avvise (botsjef og leder på tihlde.org). */
+  canSettle: boolean;
 }
 
 export interface Location {
@@ -100,6 +126,8 @@ export interface Event {
   canManage: boolean;
   /** Om den innloggede brukeren kan gi fellesbot (sub-/admin i hovedgruppen). */
   canGiveFines: boolean;
+  /** Fellesbot er allerede gitt for arrangementet (kan bare gis én gang). */
+  collectiveFineGiven: boolean;
 }
 
 export interface UploadedFile {
@@ -180,22 +208,49 @@ export interface Law {
   paragraph: string;
   title: string;
   description: string;
+  /** Foreslått antall bøter for paragrafen (fra lovverket på tihlde.org), eller null. */
+  defaultCount: number | null;
 }
+
+/**
+ * Status på en bot. Bøter fra tihlde.org går venter → godkjent → betalt (eller avvist). Sporty sine
+ * egne bøter er enten godkjent eller betalt.
+ */
+export type FineStatus = 'pending' | 'approved' | 'paid' | 'rejected';
 
 export interface Fine {
   id: string;
   groupId: string;
-  law: Pick<Law, 'paragraph' | 'title'>;
+  /** Hvor boten ligger: tihlde.org for lag derfra, ellers Sporty. */
+  source: 'tihlde' | 'sporty';
+  status: FineStatus;
+  /** Null for bøter fra tihlde.org som er gitt uten paragraf. */
+  law: Pick<Law, 'paragraph' | 'title'> | null;
   user: User;
   givenByName: string;
   reason: string;
   /** Antall bøter. Bøter telles, de har ikke et kronebeløp. */
   count: number;
-  imageUri: string | null;
+  /**
+   * Bildet til boten. For tihlde.org er det privat og må hentes med innloggingen
+   * (Authorization-header). For Sporty er det foreløpig bare en lokal fil på giverens telefon.
+   */
+  imageUrl: string | null;
+  /** Forsvaret til den som fikk boten (tihlde.org), eller null. */
+  defense: string | null;
   paid: boolean;
   /** Fellesbot gitt til alle som ikke svarte på et arrangement. */
   collective: boolean;
   createdAt: string;
+}
+
+/** Én side med bøter i en gruppe, nyeste først. */
+export interface FinesPage {
+  fines: Fine[];
+  /** Neste side, eller null når alt er hentet. */
+  nextPage: number | null;
+  /** Ubetalte bøter (venter + godkjent) i hele gruppen, eller mine i Sporty-grupper for medlemmer. */
+  unpaidCount: number;
 }
 
 /**
@@ -226,7 +281,8 @@ export interface GroupFile {
   uploadedAt: string;
 }
 
-export type NotificationType = 'event' | 'attendance' | 'fine' | 'announcement' | 'poll' | 'payment';
+export type NotificationType =
+  'event' | 'attendance' | 'fine' | 'announcement' | 'poll' | 'payment';
 
 export interface Notification {
   id: string;
@@ -278,6 +334,8 @@ export interface UnreadCounts {
 // Forespørsler (request bodies)
 
 export interface GiveFinesInput {
+  /** Unik per utfylte skjema, så samme innsending ikke gir bøtene to ganger. */
+  requestId: string;
   groupId: string;
   lawId: string;
   userIds: string[];
@@ -325,6 +383,18 @@ export interface UpdateGroupInput {
   description?: string;
   /** Id fra POST /api/uploads, eller null for å fjerne forsidebildet. */
   coverUploadId?: string | null;
+  /** Hex-farge, en av GROUP_COLORS. */
+  color?: string;
+  usesPositions?: boolean;
+}
+
+export interface CreateSubgroupInput {
+  name: string;
+  color: string;
+  description?: string;
+  usesPositions: boolean;
+  /** Medlemmer av hovedgruppen som skal være med i undergruppen. */
+  memberIds: string[];
 }
 
 export interface CreatePaymentInput {

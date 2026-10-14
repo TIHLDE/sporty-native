@@ -14,3 +14,11 @@ export const POST = handler(async (request) => {
   });
   return { ok: true };
 });
+
+/** Fjerner enhetens push-token ved utlogging, så telefonen slutter å få varsler for brukeren. */
+export const DELETE = handler(async (request) => {
+  const userId = await getUserId(request);
+  const { token } = await readJson<{ token: string }>(request);
+  await prisma.pushToken.deleteMany({ where: { token, userId } });
+  return { ok: true };
+});

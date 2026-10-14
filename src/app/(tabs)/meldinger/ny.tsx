@@ -51,7 +51,7 @@ export default function NyMeldingScreen() {
                 disabled={startDirect.isPending}
                 onPress={() => open(item.id)}
                 className="active:opacity-70">
-                <UserRow user={item} subtitle={item.email} />
+                <UserRow user={item} subtitle={item.email ?? undefined} />
               </Pressable>
             )}
           />

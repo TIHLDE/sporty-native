@@ -15,6 +15,7 @@ export function toGroup(
     parentId: string | null;
     usesPositions: boolean;
     coverUploadId: string | null;
+    logoUrl: string | null;
   },
   myRole: Dto.Role | null
 ): Dto.Group {
@@ -26,6 +27,7 @@ export function toGroup(
     parentId: group.parentId,
     usesPositions: group.usesPositions,
     coverUrl: group.coverUploadId ? `/api/uploads/${group.coverUploadId}` : null,
+    logoUrl: group.logoUrl,
     myRole,
   };
 }
@@ -35,7 +37,7 @@ export const eventInclude = {
     select: {
       name: true,
       parentId: true,
-      memberships: { select: { userId: true, role: true } },
+      memberships: { select: { userId: true, role: true, inactiveSince: true } },
       parent: { select: { memberships: { select: { userId: true, role: true } } } },
     },
   },
@@ -63,11 +65,14 @@ export function toEvent(event: EventRow, userId: string): Dto.Event {
     ourScore: event.ourScore,
     theirScore: event.theirScore,
     attendance: Object.fromEntries(event.attendances.map((a) => [a.userId, a.status])),
-    memberIds: event.group.memberships.map((m) => m.userId),
+    // Inaktive medlemmer forventes ikke å svare: de står ikke under «Ikke svart», får ikke
+    // påminnelser om svarfristen og får ikke fellesbot.
+    memberIds: event.group.memberships.filter((m) => !m.inactiveSince).map((m) => m.userId),
     // Sub-/admin i hovedgruppen kan også styre arrangementer i undergruppene.
     canManage: isManager(myRole) || isManager(parentRole),
     // Bøter gis alltid i hovedgruppen, så det er rollen der som avgjør.
     canGiveFines: event.group.parentId ? isManager(parentRole) : isManager(myRole),
+    collectiveFineGiven: event.collectiveFineAt !== null,
   };
 }
 
@@ -166,12 +171,15 @@ export function toFine(fine: Prisma.FineGetPayload<{ include: typeof fineInclude
   return {
     id: fine.id,
     groupId: fine.groupId,
+    source: 'sporty',
+    status: fine.paid ? 'paid' : 'approved',
     law: fine.law,
     user: { id: fine.user.id, name: fine.user.name, email: fine.user.email },
     givenByName: fine.givenBy.name,
     reason: fine.reason,
     count: fine.count,
-    imageUri: fine.imageUri,
+    imageUrl: fine.imageUri,
+    defense: null,
     paid: fine.paid,
     collective: fine.collective,
     createdAt: fine.createdAt.toISOString(),
@@ -186,7 +194,8 @@ export const paymentInclude = {
 
 export function toPayment(
   p: Prisma.PaymentRequestGetPayload<{ include: typeof paymentInclude }>,
-  myRole: Dto.Role | null
+  /** Sub-/admin i gruppen eller i hovedgruppen. */
+  canManage: boolean
 ): Dto.PaymentRequest {
   return {
     id: p.id,
@@ -200,7 +209,7 @@ export function toPayment(
     createdAt: p.createdAt.toISOString(),
     paidUserIds: p.confirmations.map((c) => c.userId),
     memberCount: p.group._count.memberships,
-    canManage: isManager(myRole),
+    canManage,
   };
 }
 

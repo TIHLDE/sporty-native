@@ -16,16 +16,6 @@ enum Role {
   member
 }
 
-/// Stilling på banen. Brukes i grupper med usesPositions (f.eks. 11'er).
-enum Position {
-  keeper
-  back
-  midtstopper
-  midtbane
-  ving
-  spiss
-}
-
 enum AttendanceStatus {
   kommer
   kommer_ikke
@@ -60,9 +50,13 @@ enum NotificationType {
 }
 
 model User {
-  id    String @id @default(cuid())
-  name  String
-  email String @unique
+  id       String  @id @default(cuid())
+  name     String
+  /// Mangler for medlemmer som er hentet fra en medlemsliste på tihlde.org (den har ikke e-post).
+  /// Settes første gang de logger inn selv.
+  email    String? @unique
+  /// TIHLDE-kontoen (`sub` fra Photon). Settes første gang brukeren logger inn med TIHLDE.
+  photonId String? @unique
 
   memberships          Membership[]
   attendances          Attendance[]
@@ -85,19 +79,28 @@ model User {
 }
 
 model Group {
-  id            String  @id @default(cuid())
-  name          String
+  id                   String  @id @default(cuid())
+  name                 String
   /// Hex-farge som brukes til logo og banner.
-  color         String
-  description   String  @default("")
-  /// Om medlemmene har stillinger (keeper, back, ...). Slås på per gruppe, f.eks. 11'er.
-  usesPositions Boolean @default(false)
+  color                String
+  description          String  @default("")
+  /// Om medlemmene har posisjoner. Slås på per gruppe av admin, som også lager posisjonslisten.
+  usesPositions        Boolean @default(false)
+  /// Gruppen på tihlde.org (slug i Photon) for idrettslag som hentes derfra. Medlemskapene i
+  /// slike grupper synkes fra TIHLDE når medlemmene logger inn. Null for grupper laget i Sporty.
+  photonSlug           String? @unique
+  /// Logoen til gruppen på tihlde.org (offentlig lenke). Vises som gruppebilde i appen.
+  logoUrl              String?
+  /// Om bøter er slått på for gruppen på tihlde.org. Da er tihlde.org kilden for bøtene.
+  photonFinesActivated Boolean @default(false)
+  /// Botsjefen på tihlde.org (Photon-id). Kan godkjenne bøter, sammen med lederne.
+  photonFinesAdminId   String?
   /// Forsidebilde i banneret. Uten bilde brukes gruppefargen.
-  coverUploadId String?
-  coverUpload   Upload? @relation("GroupCover", fields: [coverUploadId], references: [id], onDelete: SetNull)
-  parentId      String?
-  parent        Group?  @relation("Subgroups", fields: [parentId], references: [id], onDelete: Cascade)
-  subgroups     Group[] @relation("Subgroups")
+  coverUploadId        String?
+  coverUpload          Upload? @relation("GroupCover", fields: [coverUploadId], references: [id], onDelete: SetNull)
+  parentId             String?
+  parent               Group?  @relation("Subgroups", fields: [parentId], references: [id], onDelete: Cascade)
+  subgroups            Group[] @relation("Subgroups")
 
   memberships     Membership[]
   events          Event[]
@@ -110,47 +113,66 @@ model Group {
   notifications   Notification[]
   conversation    Conversation?
   places          Place[]
+  positions       GroupPosition[]
 }
 
 model Membership {
   userId         String
   groupId        String
-  role           Role      @default(member)
-  /// Stillingen i denne gruppen. Settes av sub-/admin.
-  position       Position?
+  role           Role           @default(member)
+  /// Posisjonen i denne gruppen, fra gruppens egen posisjonsliste. Settes av sub-/admin.
+  positionId     String?
   /// Satt når sub-/admin har gjort medlemmet inaktivt. null = aktivt medlem.
   inactiveSince  DateTime?
   /// Begrunnelsen for hvorfor medlemmet er inaktivt. Vises på profilen til medlemmet.
   inactiveReason String?
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group          Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group          Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  position       GroupPosition? @relation(fields: [positionId], references: [id], onDelete: SetNull)
 
   @@id([userId, groupId])
 }
 
+/// En posisjon i en gruppe med usesPositions, f.eks. Keeper eller Kant. Admin lager listen selv,
+/// så hver idrett kan ha sine egne.
+model GroupPosition {
+  id          String       @id @default(cuid())
+  groupId     String
+  name        String
+  /// Rekkefølgen posisjonene vises i (lavest først).
+  sortOrder   Int
+  group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+
+  @@unique([groupId, name])
+  @@index([groupId, sortOrder])
+}
+
 model Event {
-  id             String    @id @default(cuid())
-  groupId        String
-  group          Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  createdById    String?
-  createdBy      User?     @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  title          String
-  type           EventType @default(annet)
+  id               String    @id @default(cuid())
+  groupId          String
+  group            Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdById      String?
+  createdBy        User?     @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  title            String
+  type             EventType @default(annet)
   /// Laget man spiller mot. Bare for kamper.
-  opponent       String?
+  opponent         String?
   /// Notat med ekstra informasjon om arrangementet.
-  description    String    @default("")
-  locationName   String
-  latitude       Float
-  longitude      Float
-  startsAt       DateTime
+  description      String    @default("")
+  locationName     String
+  latitude         Float
+  longitude        Float
+  startsAt         DateTime
   /// Valgfri. Uten sluttid regnes arrangementet som ferdig når det starter.
-  endsAt         DateTime?
+  endsAt           DateTime?
   /// Resultat for kamper: egne mål og motstanderens mål. Registreres av sub-/admin.
-  ourScore       Int?
-  theirScore     Int?
+  ourScore         Int?
+  theirScore       Int?
   /// Valgfri. Etter fristen kan man ikke lenger svare på arrangementet.
-  signupDeadline DateTime?
+  signupDeadline   DateTime?
+  /// Når fellesbot ble gitt for arrangementet. Den kan bare gis én gang.
+  collectiveFineAt DateTime?
 
   attendances Attendance[]
   fines       Fine[]
@@ -432,4 +454,13 @@ model NotificationSettings {
   pushEventReminders  Boolean @default(true)
   pushSignupReminders Boolean @default(true)
   user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// En «Gi bot»-innsending som er utført. Id-en lages i appen per utfylte skjema, så samme
+/// innsending (dobbelttrykk, nytt forsøk etter nettfeil) ikke gir bøtene to ganger. Trengs også for
+/// bøter på tihlde.org, som ikke stopper duplikater selv.
+model FineRequest {
+  id        String   @id
+  userId    String
+  createdAt DateTime @default(now())
 }

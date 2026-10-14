@@ -13,7 +13,7 @@ import { APPEARANCE_OPTIONS, useAppearancePreference } from '@/data/appearance';
 import { useMe, useMyFines, useMyGroups } from '@/data/hooks';
 import type { Role } from '@/data/types';
 import { formatDateLong } from '@/lib/dates';
-import { formatFineCount } from '@/lib/fines';
+import { formatFineCount, isUnpaid } from '@/lib/fines';
 
 const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', subadmin: 'Subadmin', member: 'Medlem' };
 
@@ -21,7 +21,7 @@ export default function ProfilScreen() {
   const me = useMe();
   const groups = useMyGroups();
   const fines = useMyFines();
-  const unpaidCount = (fines.data ?? []).filter((f) => !f.paid).reduce((sum, f) => sum + f.count, 0);
+  const unpaidCount = (fines.data ?? []).filter(isUnpaid).reduce((sum, f) => sum + f.count, 0);
 
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerClassName="gap-6 p-4 pb-12">
@@ -30,7 +30,7 @@ export default function ProfilScreen() {
           <View className="items-center gap-2">
             <UserAvatar user={user} className="size-24" />
             <Text variant="h3">{user.name}</Text>
-            <Text className="text-muted-foreground">{user.email}</Text>
+            {user.email && <Text className="text-muted-foreground">{user.email}</Text>}
             {user.inactiveIn.map((inactive) => (
               <View
                 key={inactive.groupId}

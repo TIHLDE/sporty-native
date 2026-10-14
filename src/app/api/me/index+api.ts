@@ -1,9 +1,15 @@
 import type { Me } from '@/data/types';
-import { getUserId, handler } from '@/server/http';
+import { getAccessToken, getUserId, handler } from '@/server/http';
+import { syncFromRequest } from '@/server/photon-sync';
 import { prisma } from '@/server/prisma';
 
+/**
+ * Den innloggede brukeren. Synker idrettslagene fra tihlde.org først: med en gang ved første
+ * innlogging, deretter høyst hvert andre minutt (appen henter /me ofte).
+ */
 export const GET = handler(async (request): Promise<Me> => {
   const userId = await getUserId(request);
+  await syncFromRequest(request, userId, getAccessToken(request));
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
     include: {

@@ -39,8 +39,6 @@ const TABS = [
   { value: 'filer', label: 'Filer' },
 ];
 
-const isManager = (group: GroupDetails) => group.myRole === 'admin' || group.myRole === 'subadmin';
-
 export default function GroupScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const group = useGroup(groupId);
@@ -53,7 +51,7 @@ function GroupView({ group }: { group: GroupDetails }) {
   // Bøter gjelder hele gruppen og hører til hovedgruppen, så undergrupper har ikke Bøter-fanen.
   const tabs = group.parentId ? TABS.filter((t) => t.value !== 'boter') : TABS;
   const [favorite, setFavorite] = useState(false);
-  const manage = isManager(group);
+  const manage = group.canManage;
 
   return (
     <>
@@ -88,7 +86,7 @@ function GroupView({ group }: { group: GroupDetails }) {
           stickyHeaderIndices={[1]}
           contentInsetAdjustmentBehavior="never"
           contentContainerClassName="pb-32">
-          <GroupBanner group={group} hasSubgroups={group.subgroups.length > 0} />
+          <GroupBanner group={group} />
 
           <View className="bg-background border-border border-b py-3">
             <ScrollView
@@ -123,7 +121,7 @@ function GroupView({ group }: { group: GroupDetails }) {
             </TabsContent>
             {!group.parentId && (
               <TabsContent value="boter">
-                <FinesTab groupId={group.id} manage={manage} />
+                <FinesTab group={group} />
               </TabsContent>
             )}
             <TabsContent value="betalinger">
@@ -205,24 +203,39 @@ function PollsTab({ groupId }: { groupId: string }) {
   );
 }
 
-function FinesTab({ groupId, manage }: { groupId: string; manage: boolean }) {
-  const fines = useGroupFines(groupId);
+/**
+ * Bøtene i gruppen, 25 om gangen med «Last inn flere» nederst. For lag fra tihlde.org hentes de
+ * derfra: alle medlemmer ser alle, og alle kan gi bot. Trykk på en bot for detaljer, bilde og
+ * (for botsjef og leder) godkjenning.
+ */
+function FinesTab({ group }: { group: GroupDetails }) {
+  const fines = useGroupFines(group.id);
+  const { source, activated, canGive, canSettle } = group.fines;
+  const fromTihlde = source === 'tihlde';
+
+  if (fromTihlde && !activated) {
+    return <EmptyState text="Bøter er ikke slått på for laget på tihlde.org" />;
+  }
 
   return (
     <QueryState query={fines}>
       {(data) => {
-        const unpaid = data.filter((fine) => !fine.paid).reduce((sum, fine) => sum + fine.count, 0);
+        const all = data.pages.flatMap((page) => page.fines);
+        const unpaid = data.pages[0]?.unpaidCount ?? 0;
+        const label = fromTihlde
+          ? 'Ubetalt i laget'
+          : group.canManage
+            ? 'Ubetalt i gruppen'
+            : 'Dine ubetalte bøter';
         return (
           <View className="gap-4">
             <View className="bg-muted/60 flex-row items-center justify-between rounded-2xl p-4">
               <View>
-                <Text className="text-muted-foreground text-sm">
-                  {manage ? 'Ubetalt i gruppen' : 'Dine ubetalte bøter'}
-                </Text>
+                <Text className="text-muted-foreground text-sm">{label}</Text>
                 <Text variant="h3">{formatFineCount(unpaid)}</Text>
               </View>
-              {manage && (
-                <Link href={{ pathname: '/gi-bot/lov', params: { groupId } }} asChild>
+              {canGive && (
+                <Link href={{ pathname: '/gi-bot/lov', params: { groupId: group.id } }} asChild>
                   <Button className="bg-brand active:bg-brand/80 rounded-full">
                     <Icon as={CircleDollarSign} size={16} className="text-white" />
                     <Text className="text-white">Gi bot</Text>
@@ -231,17 +244,38 @@ function FinesTab({ groupId, manage }: { groupId: string; manage: boolean }) {
               )}
             </View>
 
-            {data.length === 0 ? (
+            {fromTihlde && (
+              <Text className="text-muted-foreground text-xs">
+                Bøtene hentes fra tihlde.org. Nye bøter venter på godkjenning fra botsjefen
+                {canSettle ? ', som du kan gjøre ved å trykke på en bot.' : '.'}
+              </Text>
+            )}
+
+            {all.length === 0 ? (
               <EmptyState text="Ingen bøter 🎉" />
             ) : (
               <View>
-                {data.map((fine, index) => (
+                {all.map((fine, index) => (
                   <View key={fine.id}>
                     {index > 0 && <Separator />}
-                    <FineRow fine={fine} />
+                    <Link href={`/grupper/${group.id}/bot/${fine.id}`} asChild>
+                      <Pressable className="active:opacity-70">
+                        <FineRow fine={fine} />
+                      </Pressable>
+                    </Link>
                   </View>
                 ))}
               </View>
+            )}
+
+            {fines.hasNextPage && (
+              <Button
+                variant="outline"
+                className="rounded-full"
+                disabled={fines.isFetchingNextPage}
+                onPress={() => fines.fetchNextPage()}>
+                <Text>{fines.isFetchingNextPage ? 'Laster…' : 'Last inn flere'}</Text>
+              </Button>
             )}
           </View>
         );

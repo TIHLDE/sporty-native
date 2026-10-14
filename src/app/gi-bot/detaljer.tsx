@@ -2,7 +2,8 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 import { Camera, ImagePlus, Minus, Plus, X } from 'lucide-react-native';
-import { useState } from 'react';
+import * as Crypto from 'expo-crypto';
+import { useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { BottomBar } from '@/components/sporty/bottom-bar';
@@ -23,14 +24,23 @@ const MAX_COUNT = 20;
 export default function GiBotDetaljerScreen() {
   const params = useLocalSearchParams<{ groupId: string; lawId: string; userIds: string }>();
   const law = useLaws(params.groupId).data?.find((l) => l.id === params.lawId);
-  const members = useGroup(params.groupId).data?.members ?? [];
+  const group = useGroup(params.groupId).data;
+  const members = group?.members ?? [];
+  // tihlde.org tar bare imot bilder som en offentlig lenke, og bildet ligger bare på telefonen.
+  const fromTihlde = group?.fines.source === 'tihlde';
   const selectedIds = params.userIds.split(',');
   const users = members.map((m) => m.user).filter((user) => selectedIds.includes(user.id));
 
-  const [count, setCount] = useState(1);
+  // Antallet lovverket foreslår for paragrafen, til brukeren endrer det selv.
+  const [chosenCount, setCount] = useState<number | null>(null);
+  const count = chosenCount ?? Math.min(Math.max(law?.defaultCount ?? 1, 1), MAX_COUNT);
   const [reason, setReason] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const giveFines = useGiveFines();
+  // Samme id for alle forsøk med dette skjemaet, så serveren ikke gir bøtene to ganger.
+  const [requestId] = useState(() => Crypto.randomUUID());
+  // Låses med en gang, før knappen rekker å bli deaktivert ved neste tegning (dobbelttrykk).
+  const submitting = useRef(false);
   const close = useCloseParent();
 
   const pickImage = async () => {
@@ -54,22 +64,29 @@ export default function GiBotDetaljerScreen() {
     if (!result.canceled) setImageUri(result.assets[0].uri);
   };
 
-  const submit = () =>
+  const submit = () => {
+    if (submitting.current) return;
+    submitting.current = true;
     giveFines.mutate(
       {
+        requestId,
         groupId: params.groupId,
         lawId: params.lawId,
         userIds: selectedIds,
         count,
         reason: reason.trim(),
         // Bildet ligger foreløpig bare lokalt på telefonen. Opplasting til server kommer senere.
-        imageUri,
+        imageUri: fromTihlde ? null : imageUri,
       },
       {
         onSuccess: close,
-        onError: (error) => Alert.alert('Kunne ikke gi bot', error.message),
+        onError: (error) => {
+          submitting.current = false;
+          Alert.alert('Kunne ikke gi bot', error.message);
+        },
       }
     );
+  };
 
   return (
     <View className="flex-1">
@@ -81,6 +98,11 @@ export default function GiBotDetaljerScreen() {
           <Text>
             {selectedIds.length} {selectedIds.length === 1 ? 'bruker' : 'brukere'} valgt
           </Text>
+          {fromTihlde && (
+            <Text className="text-muted-foreground text-sm">
+              Boten gis på tihlde.org og venter på godkjenning fra botsjefen.
+            </Text>
+          )}
         </View>
 
         <View className="gap-3">
@@ -103,12 +125,12 @@ export default function GiBotDetaljerScreen() {
         <View className="gap-3">
           <Text className="text-lg font-semibold">Antall bøter</Text>
           <View className="flex-row items-center gap-6">
-            <StepButton icon={Minus} disabled={count <= 1} onPress={() => setCount((c) => c - 1)} />
+            <StepButton icon={Minus} disabled={count <= 1} onPress={() => setCount(count - 1)} />
             <Text className="min-w-8 text-center text-3xl font-bold">{count}</Text>
             <StepButton
               icon={Plus}
               disabled={count >= MAX_COUNT}
-              onPress={() => setCount((c) => c + 1)}
+              onPress={() => setCount(count + 1)}
             />
           </View>
         </View>
@@ -126,28 +148,30 @@ export default function GiBotDetaljerScreen() {
           />
         </View>
 
-        <View className="gap-3">
-          <Text className="text-lg font-semibold">Bilde (valgfritt)</Text>
-          {imageUri ? (
-            <View>
-              <Image
-                source={{ uri: imageUri }}
-                style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16 }}
-              />
-              <Pressable
-                onPress={() => setImageUri(null)}
-                hitSlop={8}
-                className="absolute right-3 top-3 size-8 items-center justify-center rounded-full bg-black/60">
-                <Icon as={X} size={16} className="text-white" />
-              </Pressable>
-            </View>
-          ) : (
-            <View className="flex-row gap-3">
-              <ImageTile icon={ImagePlus} label="Velg bilde" onPress={pickImage} />
-              <ImageTile icon={Camera} label="Ta bilde" onPress={takePhoto} />
-            </View>
-          )}
-        </View>
+        {!fromTihlde && (
+          <View className="gap-3">
+            <Text className="text-lg font-semibold">Bilde (valgfritt)</Text>
+            {imageUri ? (
+              <View>
+                <Image
+                  source={{ uri: imageUri }}
+                  style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16 }}
+                />
+                <Pressable
+                  onPress={() => setImageUri(null)}
+                  hitSlop={8}
+                  className="absolute right-3 top-3 size-8 items-center justify-center rounded-full bg-black/60">
+                  <Icon as={X} size={16} className="text-white" />
+                </Pressable>
+              </View>
+            ) : (
+              <View className="flex-row gap-3">
+                <ImageTile icon={ImagePlus} label="Velg bilde" onPress={pickImage} />
+                <ImageTile icon={Camera} label="Ta bilde" onPress={takePhoto} />
+              </View>
+            )}
+          </View>
+        )}
       </FormScrollView>
 
       <BottomBar>

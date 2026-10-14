@@ -54,11 +54,19 @@
         {
           "calendarPermission": "Sporty legger arrangementene dine inn i kalenderen du velger."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "299a65c3-9909-4aa9-adac-515049e3d445"
+      }
+    },
+    "owner": "valcord"
   }
 }

@@ -10,7 +10,6 @@ import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { useGroup } from '@/data/hooks';
 import type { GroupDetails, Member } from '@/data/types';
-import { POSITIONS } from '@/lib/positions';
 
 const ROLE_LABEL = { admin: 'Admin', subadmin: 'Subadmin' } as const;
 
@@ -24,8 +23,6 @@ export default function MedlemmerScreen() {
     </QueryState>
   );
 }
-
-const isManager = (group: GroupDetails) => group.myRole === 'admin' || group.myRole === 'subadmin';
 
 function RoleBadge({ member }: { member: Member }) {
   if (member.role === 'member') return null;
@@ -51,7 +48,7 @@ const inactiveSubtitle = (member: Member) =>
 
 /** Alle medlemmene. Sub-/admin kan trykke på et medlem for å gjøre det inaktivt. */
 function AllMembers({ group }: { group: GroupDetails }) {
-  const manage = isManager(group);
+  const manage = group.canManage;
   return (
     <FlatList
       contentInsetAdjustmentBehavior="automatic"
@@ -93,16 +90,19 @@ function AllMembers({ group }: { group: GroupDetails }) {
   );
 }
 
-/** Medlemmene gruppert etter stilling (keeper bakerst, spiss fremst). Sub-/admin kan endre stilling. */
+/**
+ * Medlemmene gruppert etter posisjon, i rekkefølgen admin har satt. Sub-/admin kan endre
+ * posisjonen til en spiller.
+ */
 function ByPosition({ group }: { group: GroupDetails }) {
-  const manage = isManager(group);
+  const manage = group.canManage;
   const sections = [
-    ...POSITIONS.map(({ value, label }) => ({
-      key: value,
-      title: label,
-      data: group.members.filter((m) => m.position === value),
+    ...group.positions.map((position) => ({
+      key: position.id,
+      title: position.name,
+      data: group.members.filter((m) => m.position?.id === position.id),
     })),
-    { key: 'none', title: 'Uten stilling', data: group.members.filter((m) => !m.position) },
+    { key: 'none', title: 'Uten posisjon', data: group.members.filter((m) => !m.position) },
   ].filter((section) => section.data.length > 0);
 
   return (
@@ -115,7 +115,7 @@ function ByPosition({ group }: { group: GroupDetails }) {
       ListHeaderComponent={
         <Text className="text-muted-foreground pt-3 text-sm">
           {group.members.length} spillere
-          {manage ? ' · trykk på en spiller for å endre stilling eller gjøre inaktiv' : ''}
+          {manage ? ' · trykk på en spiller for å endre posisjon eller gjøre inaktiv' : ''}
         </Text>
       }
       renderSectionHeader={({ section }) => (

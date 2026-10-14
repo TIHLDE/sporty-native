@@ -66,7 +66,7 @@ export function countUnread(conversation: ConversationRow, userId: string) {
   });
 }
 
-export function toUser(user: { id: string; name: string; email: string }): Dto.User {
+export function toUser(user: { id: string; name: string; email: string | null }): Dto.User {
   return { id: user.id, name: user.name, email: user.email };
 }
 

@@ -6,6 +6,7 @@ import { BottomBar } from '@/components/sporty/bottom-bar';
 import { EmptyState } from '@/components/sporty/empty-state';
 import { QueryState } from '@/components/sporty/query-state';
 import { UserAvatar } from '@/components/sporty/user-row';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -22,11 +23,12 @@ export default function VelgBrukereScreen() {
   const { userId } = useSession();
   const group = useGroup(groupId);
 
+  // Inaktive vises, men kan ikke velges: de får ikke bøter.
   const members = (group.data?.members ?? [])
-    .map(({ user }) => user)
+    .map(({ user, inactive }) => ({ ...user, inactive: inactive !== null }))
     .filter((user) => user.id !== userId)
     .filter((user) => user.name.toLowerCase().includes(search.trim().toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => Number(a.inactive) - Number(b.inactive) || a.name.localeCompare(b.name));
 
   const toggle = (userId: string) =>
     setSelected((current) =>
@@ -52,6 +54,17 @@ export default function VelgBrukereScreen() {
             ListEmptyComponent={<EmptyState text="Ingen treff" />}
             renderItem={({ item }) => {
               const checked = selected.includes(item.id);
+              if (item.inactive) {
+                return (
+                  <View className="flex-row items-center gap-3 py-2.5 opacity-50">
+                    <UserAvatar user={item} />
+                    <Text className="flex-1 font-medium">{item.name}</Text>
+                    <Badge variant="outline">
+                      <Text>Inaktiv</Text>
+                    </Badge>
+                  </View>
+                );
+              }
               return (
                 <Pressable
                   onPress={() => toggle(item.id)}

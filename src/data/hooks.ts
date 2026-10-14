@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
+import { getValidAccessToken } from '@/lib/auth/photon';
 
 import type {
   Announcement,
@@ -20,12 +21,16 @@ import type {
   CreateEventInput,
   CreatePaymentInput,
   CreatePollInput,
+  CreateSubgroupInput,
   Event,
   Fine,
+  FineStatus,
+  FinesPage,
   GiveFinesInput,
   Group,
   GroupDetails,
   GroupFile,
+  GroupPosition,
   Law,
   Me,
   Message,
@@ -36,7 +41,6 @@ import type {
   Place,
   Poll,
   PollDetails,
-  Position,
   Role,
   UnreadCounts,
   UpdateGroupInput,
@@ -108,10 +112,30 @@ export const usePolls = (groupId: string) =>
 export const useLaws = (groupId: string) =>
   useQuery({ queryKey: ['laws', groupId], queryFn: () => api<Law[]>(`/groups/${groupId}/laws`) });
 
+/** Bøtene i gruppen, side for side (25 om gangen). Hent flere med `fetchNextPage`. */
 export const useGroupFines = (groupId: string) =>
-  useQuery({
+  useInfiniteQuery({
     queryKey: ['fines', groupId],
-    queryFn: () => api<Fine[]>(`/groups/${groupId}/fines`),
+    queryFn: ({ pageParam }) => api<FinesPage>(`/groups/${groupId}/fines?page=${pageParam}`),
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.nextPage,
+  });
+
+export const useFine = (groupId: string, fineId: string) =>
+  useQuery({
+    queryKey: ['fines', groupId, fineId],
+    queryFn: () => api<Fine>(`/fines/${fineId}?groupId=${groupId}`),
+  });
+
+/**
+ * Innloggingstokenet, for bilder som må hentes med innlogging (bøtebilder fra tihlde.org).
+ * Fornyes av seg selv når det er i ferd med å utløpe.
+ */
+export const useAccessToken = () =>
+  useQuery({
+    queryKey: ['access-token'],
+    queryFn: () => getValidAccessToken(),
+    staleTime: 30_000,
   });
 
 export const useMyFines = () =>
@@ -285,10 +309,76 @@ export function useSetResult(eventId: string) {
 export function useSetPosition(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ userId, position }: { userId: string; position: Position | null }) =>
-      api(`/groups/${groupId}/members/${userId}/position`, { method: 'PUT', body: { position } }),
+    mutationFn: ({ userId, positionId }: { userId: string; positionId: string | null }) =>
+      api(`/groups/${groupId}/members/${userId}/position`, {
+        method: 'PUT',
+        body: { positionId },
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups', groupId] }),
   });
+}
+
+/** (Admin) Lag en undergruppe i hovedgruppen `parentId`. */
+export function useCreateSubgroup(parentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateSubgroupInput) =>
+      api<Group>(`/groups/${parentId}/subgroups`, { method: 'POST', body: input }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups'] }),
+  });
+}
+
+/** (Admin) Slett en undergruppe med alt i den. */
+export function useDeleteGroup(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api(`/groups/${groupId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['groups', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+  });
+}
+
+/** (Admin) Bestem hvem som er med i en undergruppe. */
+export function useSetSubgroupMembers(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userIds: string[]) =>
+      api(`/groups/${groupId}/members`, { method: 'PUT', body: { userIds } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+  });
+}
+
+/** (Admin) Legg til, gi nytt navn, flytt og slett posisjoner i gruppens posisjonsliste. */
+export function usePositionMutations(groupId: string) {
+  const queryClient = useQueryClient();
+  const onSuccess = () => queryClient.invalidateQueries({ queryKey: ['groups', groupId] });
+  const path = `/groups/${groupId}/positions`;
+  return {
+    create: useMutation({
+      mutationFn: (name: string) => api<GroupPosition>(path, { method: 'POST', body: { name } }),
+      onSuccess,
+    }),
+    rename: useMutation({
+      mutationFn: ({ id, name }: { id: string; name: string }) =>
+        api(`${path}/${id}`, { method: 'PATCH', body: { name } }),
+      onSuccess,
+    }),
+    move: useMutation({
+      mutationFn: ({ id, move }: { id: string; move: 'up' | 'down' }) =>
+        api(`${path}/${id}`, { method: 'PATCH', body: { move } }),
+      onSuccess,
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => api(`${path}/${id}`, { method: 'DELETE' }),
+      onSuccess,
+    }),
+  };
 }
 
 /** (Sub-/admin) Gjør et medlem inaktivt med en begrunnelse, eller aktivt igjen med `null`. */
@@ -400,7 +490,11 @@ export function useCollectiveFine(eventId: string) {
   return useMutation({
     mutationFn: () =>
       api<{ count: number }>(`/events/${eventId}/collective-fine`, { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fines'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fines'] });
+      // Arrangementet vet nå at fellesbot er gitt, så knappen forsvinner.
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
   });
 }
 
@@ -437,6 +531,16 @@ export function useGiveFines() {
   return useMutation({
     mutationFn: (input: GiveFinesInput) =>
       api<{ count: number }>('/fines', { method: 'POST', body: input }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fines'] }),
+  });
+}
+
+/** Godkjenn, marker som betalt eller avvis en bot fra tihlde.org (botsjef og leder). */
+export function useSetFineStatus(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ fineId, status }: { fineId: string; status: FineStatus }) =>
+      api(`/fines/${fineId}`, { method: 'PATCH', body: { groupId, status } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fines'] }),
   });
 }

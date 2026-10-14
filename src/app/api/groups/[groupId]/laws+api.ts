@@ -1,12 +1,10 @@
-import { getUserId, handler, requireAccess } from '@/server/http';
-import { prisma } from '@/server/prisma';
+import { getLaws } from '@/server/fines';
+import { getAccessToken, getUserId, handler, requireAccess } from '@/server/http';
 
-/** Botreglene til gruppen. Undergrupper bruker reglene til hovedgruppen. */
+/** Lovverket: fra tihlde.org for lag derfra, ellers Sporty sine botregler. Undergrupper bruker
+ * hovedgruppens. */
 export const GET = handler<{ groupId: string }>(async (request, { groupId }) => {
   const userId = await getUserId(request);
-  const { parentId } = await requireAccess(userId, groupId);
-  return prisma.law.findMany({
-    where: { groupId: parentId ?? groupId },
-    orderBy: { paragraph: 'asc' },
-  });
+  await requireAccess(userId, groupId);
+  return getLaws(groupId, getAccessToken(request));
 });

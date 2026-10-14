@@ -1,10 +1,20 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { Link, useLocalSearchParams } from 'expo-router';
-import { ChevronRight, FileSpreadsheet, ImagePlus, Trophy, Users } from 'lucide-react-native';
+import { Link, router, useLocalSearchParams } from 'expo-router';
+import {
+  ChevronRight,
+  FileSpreadsheet,
+  ImagePlus,
+  ListOrdered,
+  Trash2,
+  Trophy,
+  UserPlus,
+  Users,
+} from 'lucide-react-native';
 import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Switch, View } from 'react-native';
 
+import { ColorPicker } from '@/components/sporty/color-picker';
 import { FormScrollView } from '@/components/sporty/form-scroll-view';
 import { QueryState } from '@/components/sporty/query-state';
 import { Button } from '@/components/ui/button';
@@ -14,14 +24,16 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { Textarea } from '@/components/ui/textarea';
-import { useGroup, useUpdateGroup } from '@/data/hooks';
+import { useDeleteGroup, useGroup, useUpdateGroup } from '@/data/hooks';
 import type { GroupDetails } from '@/data/types';
 import { fileUrl, uploadFile } from '@/lib/api';
 import { shareCsvExport } from '@/lib/export';
+import { ACCENT } from '@/lib/theme';
 
 /**
- * Innstillinger for gruppen (⋯ på gruppesiden). Sub-/admin har tilgang. Navn, beskrivelse og
- * forsidebilde kan bare endres av admin, og bare admin kan endre roller.
+ * Innstillinger for gruppen (⋯ på gruppesiden). Sub-/admin har tilgang. Navn, farge, beskrivelse,
+ * forsidebilde, posisjoner og roller kan bare endres av admin. Admin i hovedgruppen styrer også
+ * undergruppene: medlemmer, posisjoner og sletting.
  */
 export default function InnstillingerScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -30,7 +42,8 @@ export default function InnstillingerScreen() {
 }
 
 function Settings({ group }: { group: GroupDetails }) {
-  const isAdmin = group.myRole === 'admin';
+  const isAdmin = group.canAdmin;
+  const isSubgroup = Boolean(group.parentId);
 
   return (
     <FormScrollView
@@ -39,10 +52,20 @@ function Settings({ group }: { group: GroupDetails }) {
       {isAdmin && <GroupDetailsSection group={group} />}
 
       <Section title="Medlemmer">
+        {isAdmin && isSubgroup && (
+          <>
+            <Link href={`/grupper/${group.id}/velg-medlemmer`} asChild>
+              <Row icon={UserPlus} label="Velg medlemmer" detail={`${group.members.length}`} />
+            </Link>
+            <Separator />
+          </>
+        )}
         <Link href={`/grupper/${group.id}/roller`} asChild>
           <Row icon={Users} label="Roller" detail={isAdmin ? undefined : 'Bare visning'} />
         </Link>
       </Section>
+
+      {isAdmin && <PositionsSection group={group} />}
 
       <Section title="Eksport">
         <ExportRow
@@ -57,21 +80,107 @@ function Settings({ group }: { group: GroupDetails }) {
           path={`/groups/${group.id}/export/results`}
         />
       </Section>
+
+      {isAdmin && isSubgroup && <DeleteSubgroup group={group} />}
     </FormScrollView>
   );
 }
 
-/** (Admin) Gruppenavn, beskrivelse og forsidebilde. */
+/** (Admin) Slå posisjoner av og på, og gå til posisjonslisten. */
+function PositionsSection({ group }: { group: GroupDetails }) {
+  const updateGroup = useUpdateGroup(group.id);
+  const toggle = (usesPositions: boolean) =>
+    updateGroup.mutate(
+      { usesPositions },
+      { onError: (error) => Alert.alert('Kunne ikke lagre', error.message) }
+    );
+
+  return (
+    <Section title="Posisjoner">
+      <View className="flex-row items-center gap-3 py-3">
+        <View className="flex-1">
+          <Text>Bruk posisjoner</Text>
+          <Text className="text-muted-foreground text-xs">
+            Medlemmer-siden grupperes etter posisjon, og sub-/admin setter posisjonen til hver
+            spiller
+          </Text>
+        </View>
+        <Switch
+          value={group.usesPositions}
+          onValueChange={toggle}
+          disabled={updateGroup.isPending}
+          trackColor={{ true: ACCENT }}
+        />
+      </View>
+      {group.usesPositions && (
+        <>
+          <Separator />
+          <Link href={`/grupper/${group.id}/posisjoner`} asChild>
+            <Row
+              icon={ListOrdered}
+              label="Rediger posisjoner"
+              detail={`${group.positions.length}`}
+            />
+          </Link>
+        </>
+      )}
+    </Section>
+  );
+}
+
+/** (Admin) Slett undergruppen med alt i den. Hovedgrupper hentes fra tihlde.org og slettes ikke. */
+function DeleteSubgroup({ group }: { group: GroupDetails }) {
+  const deleteGroup = useDeleteGroup(group.id);
+  const confirm = () =>
+    Alert.alert(
+      `Slette ${group.name}?`,
+      'Arrangementer, kunngjøringer, avstemninger, filer og chatten i undergruppen slettes for godt. Medlemmene blir værende i hovedgruppen.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Slett',
+          style: 'destructive',
+          onPress: () =>
+            deleteGroup.mutate(undefined, {
+              onSuccess: () => router.dismissTo(`/grupper/${group.parentId}`),
+              onError: (error) => Alert.alert('Kunne ikke slette', error.message),
+            }),
+        },
+      ]
+    );
+
+  return (
+    <View className="bg-muted/60 rounded-2xl px-4">
+      <Pressable
+        disabled={deleteGroup.isPending}
+        onPress={confirm}
+        className="flex-row items-center gap-3 py-3.5 active:opacity-70">
+        <Icon as={Trash2} size={18} className="text-destructive" />
+        <Text className="text-destructive flex-1">Slett undergruppe</Text>
+        {deleteGroup.isPending && <ActivityIndicator size="small" />}
+      </Pressable>
+    </View>
+  );
+}
+
+/** (Admin) Gruppenavn, farge, beskrivelse og forsidebilde. */
 function GroupDetailsSection({ group }: { group: GroupDetails }) {
   const updateGroup = useUpdateGroup(group.id);
   const [name, setName] = useState(group.name);
+  const [color, setColor] = useState(group.color);
   const [description, setDescription] = useState(group.description);
   const [uploadingCover, setUploadingCover] = useState(false);
-  const changed = name.trim() !== group.name || description.trim() !== group.description;
+  const changed =
+    name.trim() !== group.name || color !== group.color || description.trim() !== group.description;
 
   const save = () =>
     updateGroup.mutate(
-      { name: name.trim(), description: description.trim() },
+      {
+        name: name.trim(),
+        description: description.trim(),
+        // Eldre grupper kan ha en farge som ikke er i velgeren, så den sendes bare når den endres.
+        ...(color !== group.color ? { color } : {}),
+      },
       {
         onSuccess: () => Alert.alert('Lagret', 'Endringene er lagret.'),
         onError: (error) => Alert.alert('Kunne ikke lagre', error.message),
@@ -115,6 +224,10 @@ function GroupDetailsSection({ group }: { group: GroupDetails }) {
 
       <Field label="Gruppenavn">
         <Input value={name} onChangeText={setName} maxLength={60} />
+      </Field>
+
+      <Field label="Farge">
+        <ColorPicker value={color} onChange={setColor} />
       </Field>
 
       <Field label="Forsidebilde">

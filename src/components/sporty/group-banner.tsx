@@ -6,8 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import type { Group } from '@/data/types';
+import type { GroupDetails } from '@/data/types';
 import { fileUrl } from '@/lib/api';
+
+import { GroupAvatar } from './group-avatar';
 
 const HEADER_HEIGHT = 44;
 
@@ -15,9 +17,10 @@ const HEADER_HEIGHT = 44;
  * Toppbanner på gruppesiden (Spond-stil): forsidebildet hvis gruppen har et, ellers gruppefargen
  * med en stor dempet logo, og knapperad nederst.
  */
-export function GroupBanner({ group, hasSubgroups }: { group: Group; hasSubgroups: boolean }) {
+export function GroupBanner({ group }: { group: GroupDetails }) {
   const insets = useSafeAreaInsets();
-  const manage = group.myRole === 'admin' || group.myRole === 'subadmin';
+  // Admin i en hovedgruppe ser Undergrupper også uten undergrupper, for å kunne lage den første.
+  const showSubgroups = group.subgroups.length > 0 || (group.canAdmin && !group.parentId);
 
   return (
     <View
@@ -33,17 +36,22 @@ export function GroupBanner({ group, hasSubgroups }: { group: Group; hasSubgroup
           {/* Mørk toning så tittel og knapper synes på lyse bilder. */}
           <View className="absolute inset-0 bg-black/35" />
         </>
-      ) : (
+      ) : group.logoUrl ? null : (
         <View className="absolute -right-10 -top-6 opacity-20">
           <Icon as={Shield} size={260} className="text-white" fill="rgba(255,255,255,0.4)" />
         </View>
+      )}
+
+      {/* Logoen fra tihlde.org, over knappene. */}
+      {group.logoUrl && (
+        <GroupAvatar group={group} size={72} className="mb-4 border-2 border-white/80" />
       )}
 
       <View className="flex-row flex-wrap items-center gap-2">
         <Link href={`/grupper/${group.id}/medlemmer`} asChild>
           <Chip label="Medlemmer" />
         </Link>
-        {hasSubgroups && (
+        {showSubgroups && (
           <Link href={`/grupper/${group.id}/undergrupper`} asChild>
             <Chip label="Undergrupper" />
           </Link>
@@ -51,7 +59,7 @@ export function GroupBanner({ group, hasSubgroups }: { group: Group; hasSubgroup
         <Link href={`/grupper/${group.id}/varsler`} asChild>
           <Chip icon={Bell} />
         </Link>
-        {manage ? (
+        {group.canManage ? (
           // Sub-/admin: innstillinger for gruppen.
           <Link href={`/grupper/${group.id}/innstillinger`} asChild>
             <Chip icon={Ellipsis} />

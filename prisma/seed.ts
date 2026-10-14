@@ -26,6 +26,7 @@ async function main() {
   const sortedGroups = [...data.groups].sort((a, b) => Number(a.parentId !== null) - Number(b.parentId !== null));
   for (const group of sortedGroups) await prisma.group.create({ data: group });
 
+  await prisma.groupPosition.createMany({ data: data.positions });
   await prisma.membership.createMany({ data: data.memberships });
   await prisma.law.createMany({ data: data.laws });
 

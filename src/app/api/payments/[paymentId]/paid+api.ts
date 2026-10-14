@@ -1,5 +1,12 @@
 import { paymentInclude, toPayment } from '@/server/dto';
-import { HttpError, getUserId, handler, readJson, requireMember } from '@/server/http';
+import {
+  HttpError,
+  canManageGroup,
+  getUserId,
+  handler,
+  readJson,
+  requireMember,
+} from '@/server/http';
 import { prisma } from '@/server/prisma';
 
 /** Medlemmet markerer selv at det har betalt (eller angrer). Betalingen skjer i Vipps. */
@@ -9,7 +16,7 @@ export const PUT = handler<{ paymentId: string }>(async (request, { paymentId })
 
   const payment = await prisma.paymentRequest.findUnique({ where: { id: paymentId } });
   if (!payment) throw new HttpError(404, 'Fant ikke betalingen');
-  const role = await requireMember(userId, payment.groupId);
+  await requireMember(userId, payment.groupId);
 
   if (paid) {
     await prisma.paymentConfirmation.upsert({
@@ -25,5 +32,5 @@ export const PUT = handler<{ paymentId: string }>(async (request, { paymentId })
     where: { id: paymentId },
     include: paymentInclude,
   });
-  return toPayment(updated, role);
+  return toPayment(updated, await canManageGroup(userId, payment.groupId));
 });

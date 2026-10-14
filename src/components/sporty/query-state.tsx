@@ -1,4 +1,4 @@
-import type { UseQueryResult } from '@tanstack/react-query';
+import type { UseInfiniteQueryResult, UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -10,7 +10,7 @@ export function QueryState<T>({
   query,
   children,
 }: {
-  query: UseQueryResult<T>;
+  query: UseQueryResult<T> | UseInfiniteQueryResult<T>;
   children: (data: T) => ReactNode;
 }) {
   if (query.isPending) {

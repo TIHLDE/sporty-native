@@ -1,5 +1,11 @@
-import { handler } from '@/server/http';
+import { HttpError, getUserId, handler } from '@/server/http';
 import { prisma } from '@/server/prisma';
 
-/** Alle brukere. Brukes av dev-innloggingen på Profil for å bytte bruker. */
-export const GET = handler(async () => prisma.user.findMany({ orderBy: { name: 'asc' } }));
+/** (Kun utvikling) Alle brukere, for «Bytt bruker» på Profil. Krever ALLOW_DEV_USER_SWITCH=true. */
+export const GET = handler(async (request) => {
+  await getUserId(request);
+  if (process.env.ALLOW_DEV_USER_SWITCH !== 'true') {
+    throw new HttpError(403, 'Bytt bruker er slått av på serveren');
+  }
+  return prisma.user.findMany({ orderBy: { name: 'asc' } });
+});

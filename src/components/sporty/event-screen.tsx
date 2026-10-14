@@ -195,9 +195,12 @@ function EventDetails({ event }: { event: Event }) {
           </Tabs>
         </View>
 
-        {event.canGiveFines && answeringClosed && ubesvart.length > 0 && (
-          <CollectiveFineButton eventId={event.id} count={ubesvart.length} />
-        )}
+        {event.canGiveFines &&
+          answeringClosed &&
+          ubesvart.length > 0 &&
+          !event.collectiveFineGiven && (
+            <CollectiveFineButton eventId={event.id} count={ubesvart.length} />
+          )}
       </ScrollView>
     </>
   );

@@ -44,6 +44,7 @@ function sampleEvent(): Event {
     memberIds: [],
     canManage: false,
     canGiveFines: false,
+  collectiveFineGiven: false,
   };
 }
 

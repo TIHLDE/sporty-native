@@ -2,6 +2,7 @@ import { Link, Redirect, useLocalSearchParams } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { FlatList, Pressable, View } from 'react-native';
 
+import { EmptyState } from '@/components/sporty/empty-state';
 import { GroupAvatar } from '@/components/sporty/group-avatar';
 import { QueryState } from '@/components/sporty/query-state';
 import { Icon } from '@/components/ui/icon';
@@ -22,14 +23,28 @@ export default function LagArrangementForScreen() {
 }
 
 function TargetList({ group }: { group: GroupDetails }) {
-  // Sub-/admin i hovedgruppen kan lage for alle undergrupper, ellers bare der man selv er sub-/admin.
-  const subgroups = isManager(group) ? group.subgroups : group.subgroups.filter(isManager);
+  // canManage tar med sub-/admin i hovedgruppen, som kan lage arrangementer i undergruppene uten
+  // selv å være med i dem. Sub-/admin i hovedgruppen kan lage for alle undergrupper, ellers bare
+  // der man selv er sub-/admin.
+  const manage = group.canManage;
+  const subgroups = manage ? group.subgroups : group.subgroups.filter(isManager);
   const targets = [
-    ...(isManager(group)
-      ? [{ id: group.id, color: group.color, label: `Alle i ${group.name}` }]
+    ...(manage
+      ? [
+          {
+            id: group.id,
+            color: group.color,
+            logoUrl: group.logoUrl,
+            label: group.parentId ? group.name : `Alle i ${group.name}`,
+          },
+        ]
       : []),
-    ...subgroups.map((s) => ({ id: s.id, color: s.color, label: s.name })),
+    ...subgroups.map((s) => ({ id: s.id, color: s.color, logoUrl: s.logoUrl, label: s.name })),
   ];
+
+  if (targets.length === 0) {
+    return <EmptyState text="Du kan ikke lage arrangementer i denne gruppen" />;
+  }
 
   // Ingen undergrupper å velge mellom: gå rett til skjemaet.
   if (targets.length === 1) {
@@ -55,7 +70,7 @@ function TargetList({ group }: { group: GroupDetails }) {
             <GroupAvatar group={item} size={40} />
             <View className="flex-1">
               <Text className="font-medium">{item.label}</Text>
-              {index === 0 && isManager(group) && (
+              {index === 0 && manage && !group.parentId && (
                 <Text className="text-muted-foreground text-xs">Alle medlemmer får varsel</Text>
               )}
             </View>

@@ -1,23 +1,35 @@
 import type { CreatePaymentInput } from '@/data/types';
 import { notify, paymentInclude, toPayment } from '@/server/dto';
-import { HttpError, getUserId, handler, readJson, requireAccess, requireManager } from '@/server/http';
+import {
+  HttpError,
+  canManageGroup,
+  getUserId,
+  handler,
+  readJson,
+  requireAccess,
+  requireManagerOrParent,
+} from '@/server/http';
 import { prisma } from '@/server/prisma';
 
 export const GET = handler<{ groupId: string }>(async (request, { groupId }) => {
   const userId = await getUserId(request);
-  const { role } = await requireAccess(userId, groupId);
+  await requireAccess(userId, groupId);
+  const canManage = await canManageGroup(userId, groupId);
   const payments = await prisma.paymentRequest.findMany({
     where: { groupId },
     include: paymentInclude,
     orderBy: { dueDate: 'asc' },
   });
-  return payments.map((p) => toPayment(p, role));
+  return payments.map((p) => toPayment(p, canManage));
 });
 
-/** (Sub-/admin) Post en betalingsoppfordring. Selve betalingen skjer i Vipps. */
+/**
+ * (Sub-/admin i gruppen eller i hovedgruppen) Post en betalingsoppfordring. Selve betalingen
+ * skjer i Vipps.
+ */
 export const POST = handler<{ groupId: string }>(async (request, { groupId }) => {
   const userId = await getUserId(request);
-  const role = await requireManager(userId, groupId);
+  await requireManagerOrParent(userId, groupId);
   const input = await readJson<CreatePaymentInput>(request);
 
   if (!input.title?.trim() || !input.vippsNumber?.trim() || !(input.amount > 0)) {
@@ -54,5 +66,5 @@ export const POST = handler<{ groupId: string }>(async (request, { groupId }) =>
     }
   );
 
-  return Response.json(toPayment(payment, role), { status: 201 });
+  return Response.json(toPayment(payment, true), { status: 201 });
 });

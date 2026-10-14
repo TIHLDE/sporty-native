@@ -2,10 +2,7 @@
 // før arrangementer, som planlegges på enheten og derfor også virker i Expo Go på iOS.
 
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import type {
-  NotificationContentInput,
-  NotificationPermissionsStatus,
-} from 'expo-notifications';
+import type { NotificationContentInput, NotificationPermissionsStatus } from 'expo-notifications';
 import { useSyncExternalStore } from 'react';
 import { AppState, Platform } from 'react-native';
 
@@ -99,6 +96,9 @@ export function useNotificationPermission() {
  * Registrerer enhetens Expo push-token på brukeren, så serveren kan sende push (bøter).
  * Krever et EAS-prosjekt (extra.eas.projectId), og på Android en development build.
  */
+/** Push-tokenet som sist ble registrert, så det kan fjernes igjen ved utlogging. */
+let registeredPushToken: string | null = null;
+
 export async function registerPushToken() {
   if (!Notifications) return null;
   const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
@@ -115,12 +115,22 @@ export async function registerPushToken() {
       method: 'POST',
       body: { token, platform: Platform.OS },
     });
+    registeredPushToken = token;
     return token;
   } catch (error) {
     // F.eks. iOS-simulator uten push-støtte. Påminnelsene virker likevel.
     if (__DEV__) console.info('[push] Fikk ikke push-token:', (error as Error).message);
     return null;
   }
+}
+
+/** Ved utlogging: telefonen skal ikke lenger få push for brukeren, og påminnelsene fjernes. */
+export async function unregisterPushToken() {
+  if (registeredPushToken) {
+    await api('/push-tokens', { method: 'DELETE', body: { token: registeredPushToken } });
+    registeredPushToken = null;
+  }
+  await Notifications?.cancelAllScheduledNotificationsAsync();
 }
 
 /** Hvilke påminnelser brukeren vil ha, fra varselinnstillingene. */

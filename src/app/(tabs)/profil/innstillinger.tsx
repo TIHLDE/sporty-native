@@ -21,6 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { updateCalendarSettings, useCalendarSettings } from '@/data/calendar-settings';
 import { useNotificationSettings, useUpdateNotificationSettings } from '@/data/hooks';
+import { useSession } from '@/data/session';
 import type { NotificationSettings } from '@/data/types';
 import { isCalendarAvailable } from '@/lib/calendar-sync';
 import { ensureNotificationPermission, useNotificationPermission } from '@/lib/notifications';
@@ -29,6 +30,13 @@ import { cn } from '@/lib/utils';
 
 /** Profil → Innstillinger: pushvarsler, kalender og utlogging. */
 export default function InnstillingerScreen() {
+  const { signOut } = useSession();
+  const confirmSignOut = () =>
+    Alert.alert('Logg ut', 'Vil du logge ut av Sporty?', [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Logg ut', style: 'destructive', onPress: () => signOut() },
+    ]);
+
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
@@ -37,7 +45,7 @@ export default function InnstillingerScreen() {
       <CalendarSection />
       <Section>
         <Pressable
-          onPress={() => Alert.alert('Logg ut', 'Kommer når innlogging med TIHLDE er på plass.')}
+          onPress={confirmSignOut}
           className="flex-row items-center gap-3 py-3.5 active:opacity-70">
           <Icon as={LogOut} size={18} className="text-destructive" />
           <Text className="text-destructive flex-1">Logg ut</Text>

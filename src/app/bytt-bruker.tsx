@@ -31,7 +31,7 @@ export default function ByttBrukerScreen() {
               className="active:opacity-70">
               <UserRow
                 user={item}
-                subtitle={item.email}
+                subtitle={item.email ?? undefined}
                 right={item.id === userId && <Icon as={Check} size={18} className="text-brand" />}
               />
             </Pressable>
