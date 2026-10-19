@@ -13,6 +13,14 @@ const PHOTON_URL = process.env.EXPO_PUBLIC_PHOTON_URL || 'https://photon.tihlde.
 const ISSUER = `${PHOTON_URL}/api/auth`;
 
 /**
+ * Bilder på tihlde.org sitt eget lager. Profilbilder der er private og hentes med tokenet, og bare
+ * dit skal tokenet sendes. Andre lenker er eksterne bilder.
+ */
+export function isPhotonAsset(url: string) {
+  return url.startsWith(`${PHOTON_URL}/api/assets/`);
+}
+
+/**
  * Appen er en offentlig klient: alt som ligger i appen kan leses av den som laster den ned, så
  * det finnes ingen klienthemmelighet. PKCE gjør at innloggingskoden er verdiløs uten verifisereren
  * som bare denne telefonen har.
