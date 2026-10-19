@@ -8,7 +8,8 @@
     "scheme": "sportynative",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.valcord.sporty-native"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,10 +18,15 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
-      "output": "static",
+      "output": "server",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -32,11 +38,35 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Sporty bruker bildene dine slik at du kan legge ved bilde når du gir en bot.",
+          "cameraPermission": "Sporty bruker kameraet slik at du kan ta bilde når du gir en bot."
+        }
+      ],
+      "expo-video",
+      "expo-sharing",
+      "expo-notifications",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Sporty legger arrangementene dine inn i kalenderen du velger."
+        }
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "299a65c3-9909-4aa9-adac-515049e3d445"
+      }
+    },
+    "owner": "valcord"
   }
 }
