@@ -128,8 +128,8 @@ export const useFine = (groupId: string, fineId: string) =>
   });
 
 /**
- * Innloggingstokenet, for bilder som må hentes med innlogging (bøtebilder fra tihlde.org).
- * Fornyes av seg selv når det er i ferd med å utløpe.
+ * Innloggingstokenet, for bilder som må hentes med innlogging (bøte- og profilbilder fra
+ * tihlde.org). Fornyes av seg selv når det er i ferd med å utløpe.
  */
 export const useAccessToken = () =>
   useQuery({
