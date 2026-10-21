@@ -33,7 +33,11 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />;
+  // Samme bilde, størrelse og farge som den native splash-skjermen (expo-splash-screen i app.json),
+  // så overgangen ikke synes.
+  const image = (
+    <Image style={styles.splashImage} source={require('@/assets/images/splash-icon.png')} />
+  );
 
   return animate ? (
     <Animated.View
@@ -138,9 +142,13 @@ const styles = StyleSheet.create({
     height: 128,
     position: 'absolute',
   },
+  splashImage: {
+    width: 200,
+    height: 155,
+  },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#208AEF',
+    backgroundColor: '#5B2C98',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
