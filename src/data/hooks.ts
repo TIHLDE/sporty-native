@@ -32,6 +32,8 @@ import type {
   GroupFile,
   GroupPosition,
   Law,
+  MatchFacts,
+  MatchStatType,
   Me,
   Message,
   MessagePage,
@@ -368,6 +370,62 @@ export function useSetSubgroupMembers(groupId: string) {
       queryClient.invalidateQueries({ queryKey: ['events'] });
     },
   });
+}
+
+/** Kampfakta for en kamp: lagets hendelsestyper og hendelsene som er registrert. */
+export const useMatchFacts = (eventId: string) =>
+  useQuery({
+    queryKey: ['events', eventId, 'match-facts'],
+    queryFn: () => api<MatchFacts>(`/events/${eventId}/match-facts`),
+  });
+
+/** (Sub-/admin) Registrer og fjern hendelser på en kamp. Svaret er hele kampfaktaen. */
+export function useMatchStatMutations(eventId: string) {
+  const queryClient = useQueryClient();
+  const onSuccess = (facts: MatchFacts) =>
+    queryClient.setQueryData(['events', eventId, 'match-facts'], facts);
+  const path = `/events/${eventId}/match-facts`;
+  return {
+    add: useMutation({
+      mutationFn: (stat: { typeId: string; userId: string }) =>
+        api<MatchFacts>(path, { method: 'POST', body: stat }),
+      onSuccess,
+    }),
+    remove: useMutation({
+      mutationFn: (statId: string) => api<MatchFacts>(`${path}/${statId}`, { method: 'DELETE' }),
+      onSuccess,
+    }),
+  };
+}
+
+/** (Admin i hovedgruppen) Legg til, gi nytt navn, flytt og slett hendelsestyper i kampfakta. */
+export function useMatchStatTypeMutations(groupId: string) {
+  const queryClient = useQueryClient();
+  const onSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['groups'] });
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+  };
+  const path = `/groups/${groupId}/match-stat-types`;
+  return {
+    create: useMutation({
+      mutationFn: (name: string) => api<MatchStatType>(path, { method: 'POST', body: { name } }),
+      onSuccess,
+    }),
+    rename: useMutation({
+      mutationFn: ({ id, name }: { id: string; name: string }) =>
+        api(`${path}/${id}`, { method: 'PATCH', body: { name } }),
+      onSuccess,
+    }),
+    move: useMutation({
+      mutationFn: ({ id, move }: { id: string; move: 'up' | 'down' }) =>
+        api(`${path}/${id}`, { method: 'PATCH', body: { move } }),
+      onSuccess,
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => api(`${path}/${id}`, { method: 'DELETE' }),
+      onSuccess,
+    }),
+  };
 }
 
 /** (Admin) Legg til, gi nytt navn, flytt og slett posisjoner i gruppens posisjonsliste. */

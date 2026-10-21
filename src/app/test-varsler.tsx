@@ -34,7 +34,12 @@ function sampleEvent(): Event {
     type: 'trening',
     opponent: null,
     description: '',
-    location: { name: 'Gløshaugen idrettsbygg', latitude: 63.4152, longitude: 10.4064 },
+    location: {
+      name: 'Gløshaugen idrettsbygg',
+      address: 'Chr. Frederiks gate 20, 7034 Trondheim',
+      latitude: 63.4152,
+      longitude: 10.4064,
+    },
     start: start.toISOString(),
     end: null,
     signupDeadline: start.toISOString(),

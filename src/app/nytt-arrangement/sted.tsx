@@ -12,6 +12,7 @@ import { useEventDraft } from '@/data/event-draft';
 import { usePlaceSearch, usePlaces } from '@/data/hooks';
 import type { Place } from '@/data/types';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { placeDetail } from '@/lib/events';
 
 /**
  * Velg sted: lagrede steder (gruppens nylig brukte + felles forslag) vises med en gang,
@@ -28,7 +29,12 @@ export default function VelgStedScreen() {
 
   const choose = (place: Place) => {
     update({
-      location: { name: place.name, latitude: place.latitude, longitude: place.longitude },
+      location: {
+        name: place.name,
+        address: place.address,
+        latitude: place.latitude,
+        longitude: place.longitude,
+      },
     });
     router.back();
   };
@@ -87,9 +93,9 @@ export default function VelgStedScreen() {
           </View>
           <View className="flex-1">
             <Text className="font-medium">{item.name}</Text>
-            {item.address ? (
+            {placeDetail(item) ? (
               <Text className="text-muted-foreground text-xs" numberOfLines={1}>
-                {item.address}
+                {placeDetail(item)}
               </Text>
             ) : null}
           </View>

@@ -1,6 +1,6 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Send } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -28,6 +28,7 @@ import {
 } from '@/data/hooks';
 import type { ConversationDetails, Message, User } from '@/data/types';
 import { formatTime } from '@/lib/dates';
+import { setOpenScreen } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 
 /** Meldinger fra samme person innenfor dette vinduet slås sammen (navn og bilde vises én gang). */
@@ -82,6 +83,14 @@ function Chat({ conversation, me }: { conversation: ConversationDetails; me: Use
   useEffect(() => {
     if (newestId) markReadMutate();
   }, [newestId, markReadMutate]);
+
+  // Ikke vis varsler om nye meldinger i samtalen mens man ser på den. De kommer inn i listen.
+  useFocusEffect(
+    useCallback(() => {
+      setOpenScreen(`/meldinger/${conversation.id}`);
+      return () => setOpenScreen(null);
+    }, [conversation.id])
+  );
 
   // Avstanden mellom listen og bunnen av skjermen når tastaturet er oppe, se BottomBar.
   const keyboardOffset = Math.max(insets.bottom, 12) - 12;

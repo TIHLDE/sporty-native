@@ -5,6 +5,7 @@ import MapView, { Marker } from 'react-native-maps';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import type { Location } from '@/data/types';
+import { locationLines } from '@/lib/events';
 
 const ZOOM = { latitudeDelta: 0.006, longitudeDelta: 0.006 };
 
@@ -58,10 +59,21 @@ export function EventMap({ location }: { location: Location }) {
       <Pressable
         onPress={() => openInMaps(location)}
         className="flex-row items-center gap-3 px-4 py-3 active:opacity-70">
-        <Text className="flex-1 font-medium">{location.name}</Text>
+        <LocationText location={location} />
         <Icon as={Navigation} size={16} className="text-brand" />
         <Text className="text-brand text-sm font-medium">Veibeskrivelse</Text>
       </Pressable>
+    </View>
+  );
+}
+
+/** Navnet på stedet, med adressen under hvis stedet har et eget navn. */
+function LocationText({ location }: { location: Location }) {
+  const { title, address } = locationLines(location);
+  return (
+    <View className="flex-1">
+      <Text className="font-medium">{title}</Text>
+      {address && <Text className="text-muted-foreground text-sm">{address}</Text>}
     </View>
   );
 }

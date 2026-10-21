@@ -6,7 +6,7 @@ export default function GrupperLayout() {
       <Stack.Screen name="index" options={{ title: 'Grupper', headerLargeTitleEnabled: true }} />
       <Stack.Screen
         name="[groupId]/index"
-        options={{ headerTransparent: true, headerTintColor: '#fff', title: '' }}
+        options={{ headerTransparent: true, title: '' }}
       />
       <Stack.Screen name="[groupId]/medlemmer" options={{ title: 'Medlemmer' }} />
       <Stack.Screen name="[groupId]/innstillinger" options={{ title: 'Innstillinger' }} />
@@ -18,6 +18,7 @@ export default function GrupperLayout() {
       />
       <Stack.Screen name="[groupId]/velg-medlemmer" options={{ title: 'Velg medlemmer' }} />
       <Stack.Screen name="[groupId]/posisjoner" options={{ title: 'Posisjoner' }} />
+      <Stack.Screen name="[groupId]/kampfakta" options={{ title: 'Kampfakta' }} />
       <Stack.Screen name="[groupId]/bot/[fineId]" options={{ title: 'Bot' }} />
       <Stack.Screen name="[groupId]/varsler" options={{ title: 'Varsler' }} />
       <Stack.Screen name="[groupId]/arrangement/[eventId]" options={{ title: '' }} />
