@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Gavel,
   LogOut,
+  MessageCircle,
   type LucideIcon,
 } from 'lucide-react-native';
 import type { ReactNode } from 'react';
@@ -95,6 +96,14 @@ function PushSection() {
                 value={data.pushFines}
                 disabled={subDisabled}
                 onChange={(pushFines) => set({ pushFines })}
+              />
+              <Separator />
+              <ToggleRow
+                icon={MessageCircle}
+                label="Nye meldinger"
+                value={data.pushMessages}
+                disabled={subDisabled}
+                onChange={(pushMessages) => set({ pushMessages })}
               />
               <Separator />
               <ToggleRow

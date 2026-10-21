@@ -1,7 +1,7 @@
 import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
-import { CircleDollarSign, FileImage, FileText, ListFilter, Plus, Star } from 'lucide-react-native';
+import { CircleDollarSign, FileImage, FileText, ListFilter, Plus } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View, useColorScheme } from 'react-native';
 
 import { AnnouncementCard } from '@/components/sporty/announcement-card';
 import { EmptyState } from '@/components/sporty/empty-state';
@@ -28,6 +28,7 @@ import {
 import type { GroupDetails } from '@/data/types';
 import { formatRelative } from '@/lib/dates';
 import { formatFineCount } from '@/lib/fines';
+import { THEME } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 const TABS = [
@@ -50,35 +51,28 @@ function GroupView({ group }: { group: GroupDetails }) {
   const [tab, setTab] = useState(TABS[0].value);
   // Bøter gjelder hele gruppen og hører til hovedgruppen, så undergrupper har ikke Bøter-fanen.
   const tabs = group.parentId ? TABS.filter((t) => t.value !== 'boter') : TABS;
-  const [favorite, setFavorite] = useState(false);
   const manage = group.canManage;
+  // Samme farge som tilbakeknappen: svart i lys modus, hvit i mørk.
+  const headerColor = THEME[useColorScheme() === 'dark' ? 'dark' : 'light'].foreground;
 
   return (
     <>
       <Stack.Screen
         options={{
           title: group.name,
-          headerRight: () => (
-            <View className="flex-row items-center gap-4 px-1">
-              <Pressable onPress={() => setFavorite((value) => !value)} hitSlop={8}>
-                <Icon
-                  as={Star}
-                  size={22}
-                  className="text-white"
-                  fill={favorite ? '#fff' : 'transparent'}
-                />
-              </Pressable>
-              {manage && (
+          headerTintColor: headerColor,
+          headerRight: manage
+            ? () => (
                 <Pressable
                   onPress={() =>
                     router.push({ pathname: '/opprett', params: { groupId: group.id } })
                   }
-                  hitSlop={8}>
-                  <Icon as={Plus} size={24} className="text-white" />
+                  hitSlop={8}
+                  className="px-1">
+                  <Icon as={Plus} size={24} color={headerColor} />
                 </Pressable>
-              )}
-            </View>
-          ),
+              )
+            : undefined,
         }}
       />
       <Tabs value={tab} onValueChange={setTab} className="flex-1 gap-0">

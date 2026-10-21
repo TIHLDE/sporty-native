@@ -43,6 +43,8 @@ export interface NotificationSettings {
   pushFines: boolean;
   pushEventReminders: boolean;
   pushSignupReminders: boolean;
+  /** Nye meldinger i gruppechatter og direktemeldinger. */
+  pushMessages: boolean;
 }
 
 export interface Group {
@@ -84,6 +86,41 @@ export interface GroupDetails extends Group {
   canAdmin: boolean;
   /** Bøtene til (hoved)gruppen. */
   fines: GroupFinesInfo;
+  /** Kampfakta for laget. Styres av hovedgruppen og gjelder også undergruppene. */
+  matchFacts: GroupMatchFacts;
+}
+
+export interface GroupMatchFacts {
+  /** Om kampfakta vises på kampene til laget. */
+  enabled: boolean;
+  /** Hendelsestypene admin har laget, i rekkefølge. */
+  types: MatchStatType[];
+  /** Id-en til hovedgruppen, der bryteren og typene endres. */
+  groupId: string;
+}
+
+/** En type hendelse i kampfakta, f.eks. Mål eller Gult kort. */
+export interface MatchStatType {
+  id: string;
+  name: string;
+}
+
+/** Én hendelse i en kamp: hvem som scoret, fikk kort osv. */
+export interface MatchStat {
+  id: string;
+  type: MatchStatType;
+  user: User;
+}
+
+/** Kampfakta for én kamp: resultatet står på arrangementet, hendelsene her. */
+export interface MatchFacts {
+  /** Av når admin har skrudd av kampfakta for laget. Da vises verken resultat eller hendelser. */
+  enabled: boolean;
+  types: MatchStatType[];
+  /** I rekkefølgen de ble registrert. */
+  stats: MatchStat[];
+  /** Sub-/admin kan registrere og fjerne hendelser. */
+  canEdit: boolean;
 }
 
 export interface GroupFinesInfo {
@@ -99,6 +136,8 @@ export interface GroupFinesInfo {
 
 export interface Location {
   name: string;
+  /** Gateadresse med postnummer og sted, f.eks. «Skansegata 20, 7014 Trondheim», eller "". */
+  address: string;
   latitude: number;
   longitude: number;
 }
@@ -351,7 +390,6 @@ export interface GiveFinesInput {
 
 export interface Place extends Location {
   id: string | null;
-  address: string;
 }
 
 export interface CreateEventInput {
@@ -391,6 +429,8 @@ export interface UpdateGroupInput {
   /** Hex-farge, en av GROUP_COLORS. */
   color?: string;
   usesPositions?: boolean;
+  /** Bare på hovedgrupper: kampfakta gjelder hele laget. */
+  usesMatchFacts?: boolean;
 }
 
 export interface CreateSubgroupInput {

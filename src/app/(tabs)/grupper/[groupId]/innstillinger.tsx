@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import {
   ChevronRight,
+  ClipboardList,
   FileSpreadsheet,
   ImagePlus,
   ListOrdered,
@@ -32,7 +33,7 @@ import { ACCENT } from '@/lib/theme';
 
 /**
  * Innstillinger for gruppen (⋯ på gruppesiden). Sub-/admin har tilgang. Navn, farge, beskrivelse,
- * forsidebilde, posisjoner og roller kan bare endres av admin. Admin i hovedgruppen styrer også
+ * forsidebilde, posisjoner, kampfakta og roller kan bare endres av admin. Admin i hovedgruppen styrer også
  * undergruppene: medlemmer, posisjoner og sletting.
  */
 export default function InnstillingerScreen() {
@@ -66,6 +67,7 @@ function Settings({ group }: { group: GroupDetails }) {
       </Section>
 
       {isAdmin && <PositionsSection group={group} />}
+      {isAdmin && !isSubgroup && <MatchFactsSettings group={group} />}
 
       <Section title="Eksport">
         <ExportRow
@@ -120,6 +122,48 @@ function PositionsSection({ group }: { group: GroupDetails }) {
               icon={ListOrdered}
               label="Rediger posisjoner"
               detail={`${group.positions.length}`}
+            />
+          </Link>
+        </>
+      )}
+    </Section>
+  );
+}
+
+/** (Admin i hovedgruppen) Slå kampfakta av og på for hele laget, og gå til hendelsestypene. */
+function MatchFactsSettings({ group }: { group: GroupDetails }) {
+  const updateGroup = useUpdateGroup(group.id);
+  const toggle = (usesMatchFacts: boolean) =>
+    updateGroup.mutate(
+      { usesMatchFacts },
+      { onError: (error) => Alert.alert('Kunne ikke lagre', error.message) }
+    );
+
+  return (
+    <Section title="Kampfakta">
+      <View className="flex-row items-center gap-3 py-3">
+        <View className="flex-1">
+          <Text>Vis kampfakta</Text>
+          <Text className="text-muted-foreground text-xs">
+            Resultat og hendelser som mål og kort på kampene, også i undergruppene. Sub-/admin
+            registrerer dem
+          </Text>
+        </View>
+        <Switch
+          value={group.matchFacts.enabled}
+          onValueChange={toggle}
+          disabled={updateGroup.isPending}
+          trackColor={{ true: ACCENT }}
+        />
+      </View>
+      {group.matchFacts.enabled && (
+        <>
+          <Separator />
+          <Link href={`/grupper/${group.id}/kampfakta`} asChild>
+            <Row
+              icon={ClipboardList}
+              label="Rediger hendelser"
+              detail={`${group.matchFacts.types.length}`}
             />
           </Link>
         </>

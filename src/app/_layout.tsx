@@ -76,6 +76,7 @@ function RootNavigator() {
             name="ny-kunngjoring"
             options={{ title: 'Ny kunngjøring', presentation: 'modal' }}
           />
+          <Stack.Screen name="ny-hendelse" options={{ title: 'Ny hendelse', presentation: 'modal' }} />
           <Stack.Screen
             name="ny-avstemning"
             options={{ title: 'Ny avstemning', presentation: 'modal' }}

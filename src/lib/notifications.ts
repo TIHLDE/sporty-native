@@ -37,14 +37,25 @@ const REMINDER_PREFIX = 'reminder:';
 /** iOS beholder bare 64 planlagte varsler per app, så vi planlegger bare de nærmeste. */
 const MAX_REMINDERS = 60;
 
-// Vis varsler også når appen er åpen.
+/** Skjermen som er åpen nå (f.eks. en samtale), så varsler om den ikke vises mens man ser på den. */
+let openScreenUrl: string | null = null;
+
+/** Settes av skjermer som selv viser det varslene handler om, mens de er i fokus. */
+export function setOpenScreen(url: string | null) {
+  openScreenUrl = url;
+}
+
+// Vis varsler også når appen er åpen, unntatt for skjermen man allerede ser på.
 Notifications?.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    const show = notification.request.content.data?.url !== openScreenUrl;
+    return {
+      shouldPlaySound: show,
+      shouldSetBadge: false,
+      shouldShowBanner: show,
+      shouldShowList: show,
+    };
+  },
 });
 
 /**

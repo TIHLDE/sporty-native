@@ -16,6 +16,8 @@ import { Platform } from 'react-native';
 import type { CalendarSettings } from '@/data/calendar-settings';
 import type { Event } from '@/data/types';
 
+import { locationLabel } from './events';
+
 /** Hvilke kalenderhendelser vi har laget, per arrangement, så de kan oppdateres og fjernes. */
 const STORAGE_KEY = 'sporty.calendar-events';
 /** Lengden på arrangementer uten sluttid (samme som standarden i skjemaet). */
@@ -147,7 +149,7 @@ function toCalendarDetails(event: Event, unanswered: boolean) {
     title: event.opponent ? `${event.title} mot ${event.opponent}` : event.title,
     startDate: start,
     endDate: end,
-    location: event.location.name,
+    location: locationLabel(event.location),
     notes: notes.join('\n\n'),
   };
 }

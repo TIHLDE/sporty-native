@@ -15,6 +15,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { EmptyState } from '@/components/sporty/empty-state';
 import { EventMap } from '@/components/sporty/event-map';
+import { MatchFactsSection } from '@/components/sporty/match-facts';
 import { QueryState } from '@/components/sporty/query-state';
 import { UserRow } from '@/components/sporty/user-row';
 import {
@@ -38,7 +39,7 @@ import { useSession } from '@/data/session';
 import type { Answer, Event, Member } from '@/data/types';
 import { summarizeAttendance } from '@/lib/attendance';
 import { formatEventRange, formatEventStart } from '@/lib/dates';
-import { EVENT_TYPE_LABEL } from '@/lib/events';
+import { EVENT_TYPE_LABEL, locationLabel } from '@/lib/events';
 import { formatFineCount } from '@/lib/fines';
 import { cn } from '@/lib/utils';
 
@@ -107,7 +108,7 @@ function EventDetails({ event }: { event: Event }) {
           <InfoLine icon={Tag} text={EVENT_TYPE_LABEL[event.type]} />
           {event.opponent && <InfoLine icon={Swords} text={`Mot ${event.opponent}`} />}
           <InfoLine icon={CalendarDays} text={formatEventRange(event.start, event.end)} />
-          <InfoLine icon={MapPin} text={event.location.name} />
+          <InfoLine icon={MapPin} text={locationLabel(event.location)} />
           {event.signupDeadline && (
             <InfoLine
               icon={Hourglass}
@@ -117,7 +118,7 @@ function EventDetails({ event }: { event: Event }) {
           {event.description ? <Text className="leading-6">{event.description}</Text> : null}
         </View>
 
-        {event.type === 'kamp' && !notStarted && <MatchResult event={event} />}
+        {event.type === 'kamp' && !notStarted && <MatchFactsSection event={event} />}
 
         <EventMap location={event.location} />
 
@@ -203,48 +204,6 @@ function EventDetails({ event }: { event: Event }) {
           )}
       </ScrollView>
     </>
-  );
-}
-
-/** Resultatet på en kamp som har startet. Sub-/admin kan registrere eller endre det. */
-function MatchResult({ event }: { event: Event }) {
-  const hasResult = event.ourScore !== null && event.theirScore !== null;
-  const outcome = !hasResult
-    ? null
-    : event.ourScore! > event.theirScore!
-      ? { label: 'Seier', className: 'text-green-500' }
-      : event.ourScore! < event.theirScore!
-        ? { label: 'Tap', className: 'text-red-500' }
-        : { label: 'Uavgjort', className: 'text-muted-foreground' };
-
-  if (!hasResult && !event.canManage) return null;
-
-  const content = (
-    <View className="bg-muted/60 flex-row items-center gap-4 rounded-2xl p-4">
-      <View className="flex-1 gap-0.5">
-        <Text className="text-muted-foreground text-sm">Resultat</Text>
-        {hasResult ? (
-          <View className="flex-row items-baseline gap-3">
-            <Text className="text-3xl font-bold">
-              {event.ourScore} – {event.theirScore}
-            </Text>
-            <Text className={cn('font-semibold', outcome!.className)}>{outcome!.label}</Text>
-          </View>
-        ) : (
-          <Text className="font-medium">Ikke registrert</Text>
-        )}
-      </View>
-      {event.canManage && (
-        <Text className="text-brand font-medium">{hasResult ? 'Endre' : 'Registrer'}</Text>
-      )}
-    </View>
-  );
-
-  if (!event.canManage) return content;
-  return (
-    <Link href={{ pathname: '/resultat', params: { eventId: event.id } }} asChild>
-      <Pressable className="active:opacity-70">{content}</Pressable>
-    </Link>
   );
 }
 

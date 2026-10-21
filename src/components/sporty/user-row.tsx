@@ -1,38 +1,30 @@
-import { Image } from "expo-image";
-import { useState, type ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { Image } from 'expo-image';
+import { useState, type ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Text } from "@/components/ui/text";
-import { useAccessToken } from "@/data/hooks";
-import type { User } from "@/data/types";
-import { isPhotonAsset } from "@/lib/auth/photon";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Text } from '@/components/ui/text';
+import { useAccessToken } from '@/data/hooks';
+import type { User } from '@/data/types';
+import { isPhotonAsset } from '@/lib/auth/photon';
 
 export function initials(name: string) {
   return name
-    .split(" ")
+    .split(' ')
     .map((part) => part[0])
     .slice(0, 2)
-    .join("")
+    .join('')
     .toUpperCase();
 }
 
 /** Profilbildet fra tihlde.org, eller initialene hvis personen ikke har bilde (eller det feiler). */
-export function UserAvatar({
-  user,
-  className,
-}: {
-  user: User;
-  className?: string;
-}) {
+export function UserAvatar({ user, className }: { user: User; className?: string }) {
   return (
-    <Avatar alt={user.name} className={className ?? "size-10"}>
+    <Avatar alt={user.name} className={className ?? 'size-10'}>
       <AvatarFallback>
         <Text className="text-sm font-medium">{initials(user.name)}</Text>
       </AvatarFallback>
-      {user.imageUrl && (
-        <ProfileImage key={user.imageUrl} url={user.imageUrl} />
-      )}
+      {user.imageUrl && <ProfileImage key={user.imageUrl} url={user.imageUrl} />}
     </Avatar>
   );
 }
@@ -78,9 +70,7 @@ export function UserRow({
       <UserAvatar user={user} />
       <View className="flex-1">
         <Text className="font-medium">{user.name}</Text>
-        {subtitle && (
-          <Text className="text-muted-foreground text-sm">{subtitle}</Text>
-        )}
+        {subtitle && <Text className="text-muted-foreground text-sm">{subtitle}</Text>}
       </View>
       {right}
     </View>
