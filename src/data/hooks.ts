@@ -494,15 +494,21 @@ export function useDeleteEvent(eventId: string) {
   });
 }
 
-/** Send en melding. Vises med en gang (optimistisk) og byttes ut med svaret fra serveren. */
+/**
+ * Send en melding, eventuelt som svar på en annen. Vises med en gang (optimistisk) og byttes ut
+ * med svaret fra serveren.
+ */
 export function useSendMessage(conversationId: string, me: User) {
   const queryClient = useQueryClient();
   const key = ['messages', conversationId];
 
   return useMutation({
-    mutationFn: (body: string) =>
-      api<Message>(`/conversations/${conversationId}/messages`, { method: 'POST', body: { body } }),
-    onMutate: async (body) => {
+    mutationFn: ({ body, replyTo }: { body: string; replyTo: Message | null }) =>
+      api<Message>(`/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        body: { body, replyToId: replyTo?.id ?? null },
+      }),
+    onMutate: async ({ body, replyTo }) => {
       await queryClient.cancelQueries({ queryKey: key });
       const tempId = `temp-${Date.now()}`;
       queryClient.setQueryData<InfiniteData<MessagePage>>(key, (data) => {
@@ -513,6 +519,15 @@ export function useSendMessage(conversationId: string, me: User) {
           sender: me,
           body,
           sentAt: new Date().toISOString(),
+          deleted: false,
+          edited: false,
+          reactions: [],
+          replyTo: replyTo && {
+            id: replyTo.id,
+            senderName: replyTo.sender.name,
+            body: replyTo.body,
+            deleted: replyTo.deleted,
+          },
         };
         const [first, ...rest] = data.pages;
         return { ...data, pages: [{ ...first, messages: [temp, ...first.messages] }, ...rest] };
@@ -532,6 +547,142 @@ export function useSendMessage(conversationId: string, me: User) {
             })),
           }
       );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: key });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+/** Slår brukerens reaksjon av eller på. Vises med en gang. */
+export function useReactToMessage(conversationId: string, me: User) {
+  const queryClient = useQueryClient();
+  const key = ['messages', conversationId];
+
+  return useMutation({
+    mutationFn: ({ messageId, emoji }: { messageId: string; emoji: string }) =>
+      api<Message>(`/conversations/${conversationId}/messages/${messageId}/reactions`, {
+        method: 'POST',
+        body: { emoji },
+      }),
+    onMutate: async ({ messageId, emoji }) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<InfiniteData<MessagePage>>(key);
+      queryClient.setQueryData<InfiniteData<MessagePage>>(
+        key,
+        (data) =>
+          data && {
+            ...data,
+            pages: data.pages.map((p) => ({
+              ...p,
+              messages: p.messages.map((m) =>
+                m.id === messageId ? { ...m, reactions: toggleReaction(m.reactions, emoji, me) } : m
+              ),
+            })),
+          }
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      queryClient.setQueryData(key, context?.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+function toggleReaction(reactions: Message['reactions'], emoji: string, me: User) {
+  const existing = reactions.find((r) => r.emoji === emoji);
+  if (!existing) return [...reactions, { emoji, count: 1, mine: true, users: [me] }];
+  if (existing.mine && existing.count === 1) return reactions.filter((r) => r.emoji !== emoji);
+  return reactions.map((r) =>
+    r.emoji === emoji
+      ? {
+          ...r,
+          count: r.count + (r.mine ? -1 : 1),
+          mine: !r.mine,
+          users: r.mine ? r.users.filter((u) => u.id !== me.id) : [...r.users, me],
+        }
+      : r
+  );
+}
+
+/** Rediger teksten i en av sine egne meldinger. Den nye teksten vises med en gang. */
+export function useEditMessage(conversationId: string) {
+  const queryClient = useQueryClient();
+  const key = ['messages', conversationId];
+
+  return useMutation({
+    mutationFn: ({ messageId, body }: { messageId: string; body: string }) =>
+      api<Message>(`/conversations/${conversationId}/messages/${messageId}`, {
+        method: 'PATCH',
+        body: { body },
+      }),
+    onMutate: async ({ messageId, body }) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<InfiniteData<MessagePage>>(key);
+      queryClient.setQueryData<InfiniteData<MessagePage>>(
+        key,
+        (data) =>
+          data && {
+            ...data,
+            pages: data.pages.map((p) => ({
+              ...p,
+              messages: p.messages.map((m) => ({
+                ...m,
+                ...(m.id === messageId && { body, edited: true }),
+                ...(m.replyTo?.id === messageId && { replyTo: { ...m.replyTo, body } }),
+              })),
+            })),
+          }
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      queryClient.setQueryData(key, context?.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: key });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+/** Slett en av sine egne meldinger. Vises som slettet med en gang. */
+export function useDeleteMessage(conversationId: string) {
+  const queryClient = useQueryClient();
+  const key = ['messages', conversationId];
+  const markDeleted = (m: Message, id: string): Message => ({
+    ...m,
+    ...(m.id === id && { body: '', deleted: true }),
+    ...(m.replyTo?.id === id && { replyTo: { ...m.replyTo, body: '', deleted: true } }),
+  });
+
+  return useMutation({
+    mutationFn: (messageId: string) =>
+      api<Message>(`/conversations/${conversationId}/messages/${messageId}`, {
+        method: 'DELETE',
+      }),
+    onMutate: async (messageId) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<InfiniteData<MessagePage>>(key);
+      queryClient.setQueryData<InfiniteData<MessagePage>>(
+        key,
+        (data) =>
+          data && {
+            ...data,
+            pages: data.pages.map((p) => ({
+              ...p,
+              messages: p.messages.map((m) => markDeleted(m, messageId)),
+            })),
+          }
+      );
+      return { previous };
+    },
+    onError: (_error, _id, context) => {
+      queryClient.setQueryData(key, context?.previous);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: key });
