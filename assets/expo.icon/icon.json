@@ -6,14 +6,27 @@
     {
       "layers" : [
         {
-          "glass" : true,
-          "image-name" : "sporty-skjold.svg",
-          "name" : "sporty-skjold"
+          "image-name" : "Sporty-shield.png",
+          "name" : "Sporty-shield",
+          "position" : {
+            "scale" : 0.4,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
         },
         {
           "hidden" : false,
           "image-name" : "grid.png",
-          "name" : "grid"
+          "name" : "grid",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
         }
       ],
       "shadow" : {
