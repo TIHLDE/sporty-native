@@ -73,6 +73,26 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="reaksjoner"
+            options={{
+              // Egen tittel i innholdet, se "opprett".
+              headerShown: false,
+              presentation: 'formSheet',
+              sheetAllowedDetents: 'fitToContents',
+              sheetGrabberVisible: true,
+            }}
+          />
+          <Stack.Screen
+            name="emoji"
+            options={{
+              // Rutenettet ruller, så arket har faste høyder i stedet for fitToContents.
+              headerShown: false,
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.6, 1],
+              sheetGrabberVisible: true,
+            }}
+          />
+          <Stack.Screen
             name="ny-kunngjoring"
             options={{ title: 'Ny kunngjøring', presentation: 'modal' }}
           />
