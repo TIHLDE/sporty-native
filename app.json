@@ -59,7 +59,13 @@
           "calendarPermission": "Sporty legger arrangementene dine inn i kalenderen du velger."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "react-native-maps",
+        {
+          "androidGoogleMapsApiKey": "AIzaSyD0ACA9w3m8aAsGiajSGVlTXnWQy7WeWVQ"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
