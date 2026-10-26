@@ -788,6 +788,19 @@ export function useSetPaid(paymentId: string) {
   });
 }
 
+/** (Sub-/admin) Godkjenn eller avvis et medlems «Jeg har betalt». */
+export function useReviewPayment(paymentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, status }: { userId: string; status: 'approved' | 'rejected' }) =>
+      api<PaymentRequest>(`/payments/${paymentId}/confirmations/${userId}`, {
+        method: 'PUT',
+        body: { status },
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payments'] }),
+  });
+}
+
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
   return useMutation({
