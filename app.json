@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "sporty-native",
+    "name": "Sporty",
     "slug": "sporty-native",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -71,6 +71,6 @@
         "projectId": "299a65c3-9909-4aa9-adac-515049e3d445"
       }
     },
-    "owner": "valcord"
+    "owner": "tihlde"
   }
 }
