@@ -43,6 +43,7 @@ function sampleEvent(): Event {
     start: start.toISOString(),
     end: null,
     signupDeadline: start.toISOString(),
+    maxAttendees: null,
     ourScore: null,
     theirScore: null,
     attendance: {},

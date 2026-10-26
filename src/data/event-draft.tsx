@@ -17,6 +17,8 @@ export interface EventDraft {
   description: string;
   /** null = ingen påmeldingsfrist. */
   signupDeadline: Date | null;
+  /** null = ingen grense. Tekst, så feltet kan være tomt mens man skriver. */
+  maxAttendees: string | null;
 }
 
 /** I morgen kl. 18:00, en fornuftig standard for treninger. */
@@ -38,6 +40,7 @@ export function draftFromEvent(event: Event): EventDraft {
     location: event.location,
     description: event.description,
     signupDeadline: event.signupDeadline ? new Date(event.signupDeadline) : null,
+    maxAttendees: event.maxAttendees === null ? null : String(event.maxAttendees),
   };
 }
 
@@ -60,6 +63,7 @@ export function EventDraftProvider({ children }: PropsWithChildren) {
     location: null,
     description: '',
     signupDeadline: null,
+    maxAttendees: null,
   }));
 
   const [loadedEventId, setLoadedEventId] = useState<string | null>(null);
