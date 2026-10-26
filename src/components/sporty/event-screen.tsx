@@ -1,4 +1,4 @@
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
+import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
 import {
   CalendarDays,
   Check,
@@ -36,7 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
 import { useCollectiveFine, useEvent, useGroup, useSetAttendance } from '@/data/hooks';
 import { useSession } from '@/data/session';
-import type { Answer, Event, Member } from '@/data/types';
+import type { Event, Member } from '@/data/types';
 import { summarizeAttendance } from '@/lib/attendance';
 import { formatEventRange, formatEventStart } from '@/lib/dates';
 import { EVENT_TYPE_LABEL, locationLabel } from '@/lib/events';
@@ -69,15 +69,19 @@ function EventDetails({ event }: { event: Event }) {
   // Vis svaret med en gang mens forespørselen pågår.
   const shownEvent: Event =
     setAttendance.isPending && setAttendance.variables
-      ? { ...event, attendance: { ...event.attendance, [userId]: setAttendance.variables } }
+      ? { ...event, attendance: { ...event.attendance, [userId]: setAttendance.variables.status } }
       : event;
   const { myStatus, kommer, kommerIkke, ubesvart } = summarizeAttendance(shownEvent, userId);
   const members = new Map((group.data?.members ?? []).map((m) => [m.user.id, m]));
 
-  const answer = (status: Answer) =>
-    setAttendance.mutate(status, {
-      onError: (error) => Alert.alert('Kunne ikke lagre svaret', error.message),
-    });
+  const comeAnyway = () =>
+    setAttendance.mutate(
+      { status: 'kommer' },
+      { onError: (error) => Alert.alert('Kunne ikke lagre svaret', error.message) }
+    );
+  // «Kommer ikke» krever begrunnelse, så den skrives i et eget ark (også for å endre den).
+  const sendRegrets = () => router.push({ pathname: '/avbud', params: { eventId: event.id } });
+  const myReason = event.absenceReasons[userId];
 
   return (
     <>
@@ -135,7 +139,7 @@ function EventDetails({ event }: { event: Event }) {
                 myStatus === 'kommer' && 'bg-green-600 active:bg-green-700'
               )}
               variant={myStatus === 'kommer' ? 'default' : 'outline'}
-              onPress={() => answer('kommer')}>
+              onPress={comeAnyway}>
               <Icon
                 as={Check}
                 size={16}
@@ -149,7 +153,7 @@ function EventDetails({ event }: { event: Event }) {
                 myStatus === 'kommer_ikke' && 'bg-red-600 active:bg-red-700'
               )}
               variant={myStatus === 'kommer_ikke' ? 'default' : 'outline'}
-              onPress={() => answer('kommer_ikke')}>
+              onPress={sendRegrets}>
               <Icon
                 as={X}
                 size={16}
@@ -160,6 +164,12 @@ function EventDetails({ event }: { event: Event }) {
               </Text>
             </Button>
           </View>
+        )}
+        {!isPast && isMember && myStatus === 'kommer_ikke' && myReason && (
+          <Text className="text-muted-foreground -mt-2 text-center text-sm">
+            Din begrunnelse: {myReason}
+            {!deadlinePassed && ' · trykk «Kommer ikke» for å endre'}
+          </Text>
         )}
 
         <View className="gap-3">
@@ -190,6 +200,7 @@ function EventDetails({ event }: { event: Event }) {
               <ParticipantList
                 userIds={kommerIkke}
                 members={members}
+                reasons={event.absenceReasons}
                 empty="Ingen har meldt avbud"
               />
             </TabsContent>
@@ -216,13 +227,16 @@ function InfoLine({ icon, text }: { icon: typeof MapPin; text: string }) {
   );
 }
 
+/** `reasons` brukes for «Kommer ikke»: begrunnelsen vises under navnet. */
 function ParticipantList({
   userIds,
   members,
+  reasons,
   empty,
 }: {
   userIds: string[];
   members: Map<string, Member>;
+  reasons?: Record<string, string>;
   empty: string;
 }) {
   if (userIds.length === 0) return <EmptyState text={empty} />;
@@ -235,7 +249,7 @@ function ParticipantList({
         return (
           <View key={id}>
             {index > 0 && <Separator />}
-            <UserRow user={member.user} />
+            <UserRow user={member.user} subtitle={reasons?.[id] || undefined} />
           </View>
         );
       })}

@@ -73,6 +73,16 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="avbud"
+            options={{
+              // Egen tittel i innholdet, se "opprett".
+              headerShown: false,
+              presentation: 'formSheet',
+              sheetAllowedDetents: 'fitToContents',
+              sheetGrabberVisible: true,
+            }}
+          />
+          <Stack.Screen
             name="reaksjoner"
             options={{
               // Egen tittel i innholdet, se "opprett".

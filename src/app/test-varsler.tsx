@@ -46,6 +46,7 @@ function sampleEvent(): Event {
     ourScore: null,
     theirScore: null,
     attendance: {},
+    absenceReasons: {},
     memberIds: [],
     canManage: false,
     canGiveFines: false,
