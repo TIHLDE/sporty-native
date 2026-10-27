@@ -255,11 +255,12 @@ export function useUpdateNotificationSettings() {
   });
 }
 
+/** «Kommer ikke» krever en begrunnelse (`reason`). */
 export function useSetAttendance(eventId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (status: Answer) =>
-      api<Event>(`/events/${eventId}/attendance`, { method: 'PUT', body: { status } }),
+    mutationFn: ({ status, reason }: { status: Answer; reason?: string }) =>
+      api<Event>(`/events/${eventId}/attendance`, { method: 'PUT', body: { status, reason } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
   });
 }
