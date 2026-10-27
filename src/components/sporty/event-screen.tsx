@@ -65,6 +65,12 @@ function EventDetails({ event }: { event: Event }) {
   const answeringClosed = event.signupDeadline ? deadlinePassed : new Date(event.start) <= now;
   const isMember = event.memberIds.includes(userId);
   const notStarted = new Date(event.start) > now;
+  // Fullt: ingen nye kan si «Kommer», men de som allerede kommer beholder plassen.
+  const comingCount = Object.values(event.attendance).filter((s) => s === 'kommer').length;
+  const full =
+    event.maxAttendees !== null &&
+    comingCount >= event.maxAttendees &&
+    event.attendance[userId] !== 'kommer';
 
   // Vis svaret med en gang mens forespørselen pågår.
   const shownEvent: Event =
@@ -130,6 +136,7 @@ function EventDetails({ event }: { event: Event }) {
         {!isPast && isMember && !deadlinePassed && (
           <View className="flex-row gap-3">
             <Button
+              disabled={full}
               className={cn(
                 'flex-1 rounded-full',
                 myStatus === 'kommer' && 'bg-green-600 active:bg-green-700'
@@ -141,7 +148,9 @@ function EventDetails({ event }: { event: Event }) {
                 size={16}
                 className={myStatus === 'kommer' ? 'text-white' : undefined}
               />
-              <Text className={myStatus === 'kommer' ? 'text-white' : undefined}>Kommer</Text>
+              <Text className={myStatus === 'kommer' ? 'text-white' : undefined}>
+                {full ? 'Fullt' : 'Kommer'}
+              </Text>
             </Button>
             <Button
               className={cn(
@@ -167,7 +176,10 @@ function EventDetails({ event }: { event: Event }) {
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="w-full">
               <TabsTrigger value="kommer" className="flex-1">
-                <Text>Kommer ({kommer.length})</Text>
+                <Text>
+                  Kommer ({kommer.length}
+                  {event.maxAttendees !== null && `/${event.maxAttendees}`})
+                </Text>
               </TabsTrigger>
               <TabsTrigger value="ubesvart" className="flex-1">
                 <Text>Ikke svart ({ubesvart.length})</Text>

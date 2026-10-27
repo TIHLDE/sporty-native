@@ -65,7 +65,14 @@ function EventForm({ groupId, editing }: { groupId: string; editing?: Event }) {
     draft.signupDeadline && draft.signupDeadline > draft.start
       ? 'Fristen må være før arrangementet starter'
       : null;
-  const canSubmit = Boolean(draft.title.trim() && draft.location && !endError && !deadlineError);
+  const maxAttendees = draft.maxAttendees === null ? null : Number(draft.maxAttendees);
+  const maxAttendeesError =
+    maxAttendees !== null && !(Number.isInteger(maxAttendees) && maxAttendees > 0)
+      ? 'Skriv et helt tall over 0'
+      : null;
+  const canSubmit = Boolean(
+    draft.title.trim() && draft.location && !endError && !deadlineError && !maxAttendeesError
+  );
 
   const setStart = (start: Date) => {
     // Flytt sluttiden med, så varigheten beholdes.
@@ -85,6 +92,7 @@ function EventForm({ groupId, editing }: { groupId: string; editing?: Event }) {
         location: draft.location,
         description: draft.description.trim(),
         signupDeadline: draft.signupDeadline?.toISOString() ?? null,
+        maxAttendees,
       },
       {
         onSuccess: close,
@@ -200,6 +208,30 @@ function EventForm({ groupId, editing }: { groupId: string; editing?: Event }) {
               onChange={(signupDeadline) => update({ signupDeadline })}
               maximumDate={draft.start}
             />
+          )}
+        </ToggleField>
+
+        <ToggleField
+          label="Maks antall deltakere"
+          enabled={draft.maxAttendees !== null}
+          // Forslag: hele gruppen. Endres til antallet det er plass til.
+          onToggle={(on) =>
+            update({ maxAttendees: on ? String(group?.members.length ?? 20) : null })
+          }
+          error={maxAttendeesError}>
+          {draft.maxAttendees !== null && (
+            <>
+              <Input
+                value={draft.maxAttendees}
+                onChangeText={(text) => update({ maxAttendees: text.replace(/\D/g, '') })}
+                keyboardType="number-pad"
+                placeholder="F.eks. 80"
+                maxLength={5}
+              />
+              <Text className="text-muted-foreground text-xs">
+                Når så mange har svart «Kommer», kan ingen flere melde seg på.
+              </Text>
+            </>
           )}
         </ToggleField>
 
