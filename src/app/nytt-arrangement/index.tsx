@@ -12,7 +12,7 @@ import { useGroup } from '@/data/hooks';
 import type { Group, GroupDetails } from '@/data/types';
 
 const isManager = (group: Pick<Group, 'myRole'>) =>
-  group.myRole === 'admin' || group.myRole === 'subadmin';
+  group.myRole === 'admin' || group.myRole === 'index' || group.myRole === 'subadmin';
 
 /** Steg 1: lag arrangementet for hele gruppen, eller for en av undergruppene. */
 export default function LagArrangementForScreen() {

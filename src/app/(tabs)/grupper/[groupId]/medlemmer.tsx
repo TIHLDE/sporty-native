@@ -11,7 +11,7 @@ import { Text } from '@/components/ui/text';
 import { useGroup } from '@/data/hooks';
 import type { GroupDetails, Member } from '@/data/types';
 
-const ROLE_LABEL = { admin: 'Admin', subadmin: 'Subadmin' } as const;
+const ROLE_LABEL = { admin: 'Admin', subadmin: 'Subadmin', botsjef: 'Botsjef' } as const;
 
 export default function MedlemmerScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -25,7 +25,8 @@ export default function MedlemmerScreen() {
 }
 
 function RoleBadge({ member }: { member: Member }) {
-  if (member.role === 'member') return null;
+  // Index skal ikke fremheves, så de vises som vanlige medlemmer.
+  if (member.role === 'member' || member.role === 'index') return null;
   return (
     <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
       <Text>{ROLE_LABEL[member.role]}</Text>

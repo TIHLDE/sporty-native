@@ -19,7 +19,8 @@ export default function RollerScreen() {
   return (
     <QueryState query={group}>
       {(data) => {
-        const isAdmin = data.myRole === 'admin';
+        // Admin og Index i gruppen eller hovedgruppen (samme som serveren sjekker).
+        const isAdmin = data.canAdmin;
         return (
           <FlatList
             contentInsetAdjustmentBehavior="automatic"
@@ -42,7 +43,7 @@ export default function RollerScreen() {
                     <View className="flex-row items-center gap-2">
                       <Badge
                         variant={
-                          item.role === 'member'
+                          item.role === 'member' || item.role === 'index'
                             ? 'outline'
                             : item.role === 'admin'
                               ? 'default'
