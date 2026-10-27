@@ -30,6 +30,8 @@ function sampleEvent(): Event {
     id: 'eksempel',
     groupId: 'herrer',
     groupName: 'Pythons Herrer',
+    groupColor: '#5B2C98',
+    groupLogoUrl: null,
     title: 'Trening',
     type: 'trening',
     opponent: null,
