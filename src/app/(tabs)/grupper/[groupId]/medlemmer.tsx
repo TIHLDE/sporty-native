@@ -11,7 +11,7 @@ import { Text } from '@/components/ui/text';
 import { useGroup } from '@/data/hooks';
 import type { GroupDetails, Member } from '@/data/types';
 
-const ROLE_LABEL = { admin: 'Admin', subadmin: 'Subadmin' } as const;
+const ROLE_LABEL = { admin: 'Admin', subadmin: 'Subadmin', botsjef: 'Botsjef' } as const;
 
 export default function MedlemmerScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();

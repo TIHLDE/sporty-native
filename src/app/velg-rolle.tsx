@@ -12,7 +12,10 @@ import { ROLES } from '@/lib/roles';
 /** (Admin) Velg rolle for et medlem. */
 export default function VelgRolleScreen() {
   const { groupId, userId } = useLocalSearchParams<{ groupId: string; userId: string }>();
-  const member = useGroup(groupId).data?.members.find((m) => m.user.id === userId);
+  const group = useGroup(groupId).data;
+  const member = group?.members.find((m) => m.user.id === userId);
+  // Botsjef gir fellesbot, og bøtene hører til hovedgruppen.
+  const roles = ROLES.filter((role) => role.value !== 'botsjef' || !group?.parentId);
   const setRole = useSetRole(groupId);
 
   const choose = (role: Role) => {
@@ -30,7 +33,7 @@ export default function VelgRolleScreen() {
     <View className="px-4 pb-6 pt-6">
       <Text variant="h4">Rolle</Text>
       {member && <Text className="text-muted-foreground pb-2 text-sm">{member.user.name}</Text>}
-      {ROLES.map((role, index) => (
+      {roles.map((role, index) => (
         <View key={role.value}>
           {index > 0 && <Separator />}
           <Pressable

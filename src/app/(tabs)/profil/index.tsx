@@ -15,7 +15,12 @@ import type { Role } from '@/data/types';
 import { formatDateLong } from '@/lib/dates';
 import { formatFineCount, isUnpaid } from '@/lib/fines';
 
-const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', subadmin: 'Subadmin', member: 'Medlem' };
+const ROLE_LABEL: Record<Role, string> = {
+  admin: 'Admin',
+  subadmin: 'Subadmin',
+  botsjef: 'Botsjef',
+  member: 'Medlem',
+};
 
 export default function ProfilScreen() {
   const me = useMe();

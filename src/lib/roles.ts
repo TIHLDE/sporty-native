@@ -11,6 +11,11 @@ export const ROLES: { value: Role; label: string; description: string }[] = [
     label: 'Subadmin',
     description: 'Lager arrangementer, kunngjøringer og avstemninger, og gir bøter',
   },
+  {
+    value: 'botsjef',
+    label: 'Botsjef',
+    description: 'Vanlig medlem som også kan gi fellesbot. Bare i hovedgruppen',
+  },
   { value: 'member', label: 'Medlem', description: 'Vanlig medlem' },
 ];
 
