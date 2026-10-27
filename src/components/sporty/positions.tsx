@@ -7,7 +7,13 @@ import { UserRow } from '@/components/sporty/user-row';
 import { Icon } from '@/components/ui/icon';
 import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
-import type { GroupDetails, Member } from '@/data/types';
+import type { Event, GroupDetails, Member } from '@/data/types';
+
+/** Posisjoner vises bare på kamper og treninger, og bare i grupper som bruker posisjoner. */
+export function eventPositions(event: Pick<Event, 'type'>, group: GroupDetails | undefined) {
+  const relevant = event.type === 'kamp' || event.type === 'trening';
+  return relevant && group?.usesPositions ? group.positions : [];
+}
 
 /**
  * Deltakerne delt inn etter posisjon i gruppen, i gruppens rekkefølge (f.eks. Keeper, Forsvar …),

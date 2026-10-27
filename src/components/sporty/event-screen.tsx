@@ -16,7 +16,11 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { EmptyState } from '@/components/sporty/empty-state';
 import { EventMap } from '@/components/sporty/event-map';
 import { MatchFactsSection } from '@/components/sporty/match-facts';
-import { ChoosePositionPrompt, ParticipantsByPosition } from '@/components/sporty/positions';
+import {
+  ChoosePositionPrompt,
+  ParticipantsByPosition,
+  eventPositions,
+} from '@/components/sporty/positions';
 import { QueryState } from '@/components/sporty/query-state';
 import { UserRow } from '@/components/sporty/user-row';
 import {
@@ -80,8 +84,8 @@ function EventDetails({ event }: { event: Event }) {
       : event;
   const { myStatus, kommer, kommerIkke, ubesvart } = summarizeAttendance(shownEvent, userId);
   const members = new Map((group.data?.members ?? []).map((m) => [m.user.id, m]));
-  // Posisjonene i gruppen, hvis den bruker dem. Da deles «Kommer» inn etter posisjon.
-  const positions = group.data?.usesPositions ? group.data.positions : [];
+  // Posisjonene i gruppen på kamper og treninger. Da deles «Kommer» inn etter posisjon.
+  const positions = eventPositions(event, group.data);
   const missingMyPosition = isMember && positions.length > 0 && !members.get(userId)?.position;
 
   const comeAnyway = () =>
