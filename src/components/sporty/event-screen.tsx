@@ -16,6 +16,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { EmptyState } from '@/components/sporty/empty-state';
 import { EventMap } from '@/components/sporty/event-map';
 import { MatchFactsSection } from '@/components/sporty/match-facts';
+import { ChoosePositionPrompt, ParticipantsByPosition } from '@/components/sporty/positions';
 import { QueryState } from '@/components/sporty/query-state';
 import { UserRow } from '@/components/sporty/user-row';
 import {
@@ -79,6 +80,9 @@ function EventDetails({ event }: { event: Event }) {
       : event;
   const { myStatus, kommer, kommerIkke, ubesvart } = summarizeAttendance(shownEvent, userId);
   const members = new Map((group.data?.members ?? []).map((m) => [m.user.id, m]));
+  // Posisjonene i gruppen, hvis den bruker dem. Da deles «Kommer» inn etter posisjon.
+  const positions = group.data?.usesPositions ? group.data.positions : [];
+  const missingMyPosition = isMember && positions.length > 0 && !members.get(userId)?.position;
 
   const comeAnyway = () =>
     setAttendance.mutate(
@@ -180,6 +184,7 @@ function EventDetails({ event }: { event: Event }) {
             {!deadlinePassed && ' · trykk «Kommer ikke» for å endre'}
           </Text>
         )}
+        {!isPast && missingMyPosition && <ChoosePositionPrompt groupId={event.groupId} />}
 
         <View className="gap-3">
           <Text variant="h4">Deltakere</Text>
@@ -199,11 +204,20 @@ function EventDetails({ event }: { event: Event }) {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="kommer">
-              <ParticipantList
-                userIds={kommer}
-                members={members}
-                empty="Ingen har meldt seg på ennå"
-              />
+              {positions.length > 0 ? (
+                <ParticipantsByPosition
+                  userIds={kommer}
+                  members={members}
+                  positions={positions}
+                  empty="Ingen har meldt seg på ennå"
+                />
+              ) : (
+                <ParticipantList
+                  userIds={kommer}
+                  members={members}
+                  empty="Ingen har meldt seg på ennå"
+                />
+              )}
             </TabsContent>
             <TabsContent value="ubesvart">
               <ParticipantList userIds={ubesvart} members={members} empty="Alle har svart 🎉" />
