@@ -2,7 +2,6 @@ import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
 import {
   CalendarDays,
   Check,
-  Gavel,
   Hourglass,
   MapPin,
   Pencil,
@@ -13,37 +12,27 @@ import {
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
+import {
+  CollectiveFineButton,
+  canGiveCollectiveFine,
+} from '@/components/sporty/collective-fine-button';
 import { EmptyState } from '@/components/sporty/empty-state';
 import { EventMap } from '@/components/sporty/event-map';
 import { MatchFactsSection } from '@/components/sporty/match-facts';
 import { QueryState } from '@/components/sporty/query-state';
 import { UserRow } from '@/components/sporty/user-row';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
-import { useCollectiveFine, useEvent, useGroup, useSetAttendance } from '@/data/hooks';
+import { useEvent, useGroup, useSetAttendance } from '@/data/hooks';
 import { useSession } from '@/data/session';
 import type { Event, Member } from '@/data/types';
 import { summarizeAttendance } from '@/lib/attendance';
 import { formatEventRange, formatEventStart } from '@/lib/dates';
 import { EVENT_TYPE_LABEL, locationLabel } from '@/lib/events';
-import { formatFineCount } from '@/lib/fines';
 import { cn } from '@/lib/utils';
-
-const COLLECTIVE_FINE_COUNT = 1;
 
 /** Arrangementssiden. Brukes av både Hjem- og Grupper-fanen, så den skyves inn i fanen man står i. */
 export function EventScreen() {
@@ -60,9 +49,6 @@ function EventDetails({ event }: { event: Event }) {
   const now = new Date();
   const isPast = new Date(event.end ?? event.start) < now;
   const deadlinePassed = event.signupDeadline !== null && new Date(event.signupDeadline) < now;
-  // Fellesbot kan først gis når man ikke lenger kan svare: etter fristen, eller når
-  // arrangementet har startet hvis det ikke har noen frist.
-  const answeringClosed = event.signupDeadline ? deadlinePassed : new Date(event.start) <= now;
   const isMember = event.memberIds.includes(userId);
   const notStarted = new Date(event.start) > now;
   // Fullt: ingen nye kan si «Kommer», men de som allerede kommer beholder plassen.
@@ -219,12 +205,9 @@ function EventDetails({ event }: { event: Event }) {
           </Tabs>
         </View>
 
-        {event.canGiveFines &&
-          answeringClosed &&
-          ubesvart.length > 0 &&
-          !event.collectiveFineGiven && (
-            <CollectiveFineButton eventId={event.id} count={ubesvart.length} />
-          )}
+        {canGiveCollectiveFine(event, ubesvart.length, now) && (
+          <CollectiveFineButton eventId={event.id} count={ubesvart.length} />
+        )}
       </ScrollView>
     </>
   );
@@ -270,43 +253,3 @@ function ParticipantList({
 }
 
 /** (Sub-/admin) Fellesbot til alle som ikke har svart. */
-function CollectiveFineButton({ eventId, count }: { eventId: string; count: number }) {
-  const collectiveFine = useCollectiveFine(eventId);
-
-  const give = () =>
-    collectiveFine.mutate(undefined, {
-      onSuccess: ({ count: given }) =>
-        Alert.alert(
-          'Fellesbot gitt',
-          `${given} ${given === 1 ? 'medlem' : 'medlemmer'} fikk 1 bot.`
-        ),
-      onError: (error) => Alert.alert('Kunne ikke gi fellesbot', error.message),
-    });
-
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="outline" className="border-destructive rounded-full">
-          <Icon as={Gavel} size={16} className="text-destructive" />
-          <Text className="text-destructive">Gi fellesbot ({count})</Text>
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Gi fellesbot?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {count} medlemmer som ikke har svart får {formatFineCount(COLLECTIVE_FINE_COUNT)} hver.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>
-            <Text>Avbryt</Text>
-          </AlertDialogCancel>
-          <AlertDialogAction onPress={give}>
-            <Text>Gi fellesbot</Text>
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
