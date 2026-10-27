@@ -10,8 +10,12 @@ import { formatDayOfMonth, formatEventStart, formatMonthShort } from '@/lib/date
 import { EVENT_TYPE_LABEL } from '@/lib/events';
 
 import { AttendanceCounts } from './attendance-counts';
+import { CollectiveFineButton, canGiveCollectiveFine } from './collective-fine-button';
 
-/** Arrangementskort i Spond-stil: datoblokk til venstre, detaljer og oppmøte til høyre. */
+/**
+ * Arrangementskort i Spond-stil: datoblokk til venstre, detaljer og oppmøte til høyre. Sub-/admin
+ * får «Gi fellesbot» nederst når det kan gis, så de slipper å åpne arrangementet.
+ */
 export function EventCard({ event }: { event: Event }) {
   const { userId } = useSession();
   const { myStatus, kommer, ubesvart, kommerIkke } = summarizeAttendance(event, userId);
@@ -23,45 +27,55 @@ export function EventCard({ event }: { event: Event }) {
     ? (`/arrangement/${event.id}` as const)
     : (`/grupper/${event.groupId}/arrangement/${event.id}` as const);
 
-  return (
-    <Link href={href} asChild>
-      <Pressable className="bg-muted/60 flex-row items-center gap-4 rounded-2xl px-4 py-3 active:opacity-70">
-        <View className="w-12 items-center">
-          <Text className="text-muted-foreground text-xs font-medium">
-            {formatMonthShort(event.start)}
-          </Text>
-          <Text className="text-2xl font-semibold">{formatDayOfMonth(event.start)}</Text>
-        </View>
+  const showFineButton = canGiveCollectiveFine(event, ubesvart.length);
 
-        <View className="flex-1 gap-0.5">
-          <View className="flex-row items-center justify-between gap-2">
-            <Text className="flex-1 font-semibold" numberOfLines={1}>
-              {event.title}
+  return (
+    <View className="bg-muted/60 overflow-hidden rounded-2xl">
+      <Link href={href} asChild>
+        <Pressable className="flex-row items-center gap-4 px-4 py-3 active:opacity-70">
+          <View className="w-12 items-center">
+            <Text className="text-muted-foreground text-xs font-medium">
+              {formatMonthShort(event.start)}
             </Text>
-            {isMember && canAnswer && myStatus === 'ubesvart' && (
-              <Badge className="bg-brand border-transparent">
-                <Text className="text-white">Svar</Text>
-              </Badge>
+            <Text className="text-2xl font-semibold">{formatDayOfMonth(event.start)}</Text>
+          </View>
+
+          <View className="flex-1 gap-0.5">
+            <View className="flex-row items-center justify-between gap-2">
+              <Text className="flex-1 font-semibold" numberOfLines={1}>
+                {event.title}
+              </Text>
+              {isMember && canAnswer && myStatus === 'ubesvart' && (
+                <Badge className="bg-brand border-transparent">
+                  <Text className="text-white">Svar</Text>
+                </Badge>
+              )}
+            </View>
+            {event.opponent && (
+              <Text className="text-sm font-medium" numberOfLines={1}>
+                mot {event.opponent}
+              </Text>
             )}
-          </View>
-          {event.opponent && (
-            <Text className="text-sm font-medium" numberOfLines={1}>
-              mot {event.opponent}
+            <Text className="text-sm">{formatEventStart(event.start)}</Text>
+            <Text className="text-muted-foreground text-sm">
+              {EVENT_TYPE_LABEL[event.type]} · {event.groupName}
             </Text>
-          )}
-          <Text className="text-sm">{formatEventStart(event.start)}</Text>
-          <Text className="text-muted-foreground text-sm">
-            {EVENT_TYPE_LABEL[event.type]} · {event.groupName}
-          </Text>
-          <View className="mt-1">
-            <AttendanceCounts
-              kommer={kommer.length}
-              ubesvart={ubesvart.length}
-              kommerIkke={kommerIkke.length}
-            />
+            <View className="mt-1">
+              <AttendanceCounts
+                kommer={kommer.length}
+                ubesvart={ubesvart.length}
+                kommerIkke={kommerIkke.length}
+              />
+            </View>
           </View>
+        </Pressable>
+      </Link>
+      {/* Utenfor lenken, så trykket ikke også åpner arrangementet. */}
+      {showFineButton && (
+        <View className="px-4 pb-3">
+          <CollectiveFineButton eventId={event.id} count={ubesvart.length} />
         </View>
-      </Pressable>
-    </Link>
+      )}
+    </View>
   );
 }
