@@ -20,6 +20,7 @@ const ROLE_LABEL: Record<Role, string> = {
   subadmin: 'Subadmin',
   botsjef: 'Botsjef',
   member: 'Medlem',
+  index: 'Index',
 };
 
 export default function ProfilScreen() {
@@ -73,7 +74,7 @@ export default function ProfilScreen() {
                   <Pressable className="flex-row items-center gap-3 py-3 active:opacity-70">
                     <GroupAvatar group={group} size={36} />
                     <Text className="flex-1 font-medium">{group.name}</Text>
-                    {group.myRole && group.myRole !== 'member' && (
+                    {group.myRole && group.myRole !== 'member' && group.myRole !== 'index' && (
                       <Badge variant="secondary">
                         <Text>{ROLE_LABEL[group.myRole]}</Text>
                       </Badge>

@@ -17,6 +17,11 @@ export const ROLES: { value: Role; label: string; description: string }[] = [
     description: 'Vanlig medlem som også kan gi fellesbot. Bare i hovedgruppen',
   },
   { value: 'member', label: 'Medlem', description: 'Vanlig medlem' },
+  {
+    value: 'index',
+    label: 'Index',
+    description: 'Full admin-tilgang for Index. Vises som vanlig medlem i listene',
+  },
 ];
 
 export const ROLE_LABEL = Object.fromEntries(

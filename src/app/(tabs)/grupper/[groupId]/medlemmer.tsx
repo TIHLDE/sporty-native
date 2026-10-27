@@ -25,7 +25,8 @@ export default function MedlemmerScreen() {
 }
 
 function RoleBadge({ member }: { member: Member }) {
-  if (member.role === 'member') return null;
+  // Index skal ikke fremheves, så de vises som vanlige medlemmer.
+  if (member.role === 'member' || member.role === 'index') return null;
   return (
     <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
       <Text>{ROLE_LABEL[member.role]}</Text>
