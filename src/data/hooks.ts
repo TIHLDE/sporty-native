@@ -457,6 +457,49 @@ export function usePositionMutations(groupId: string) {
 }
 
 /** (Sub-/admin) Gjør et medlem inaktivt med en begrunnelse, eller aktivt igjen med `null`. */
+/**
+ * (Admin) Hvilke undergrupper et medlem av hovedgruppen er med i. Vises med en gang i
+ * medlemslisten, og undergruppene hentes på nytt.
+ */
+export function useSetMemberSubgroups(groupId: string) {
+  const queryClient = useQueryClient();
+  const key = ['groups', groupId];
+
+  return useMutation({
+    mutationFn: ({ userId, subgroupIds }: { userId: string; subgroupIds: string[] }) =>
+      api(`/groups/${groupId}/members/${userId}/subgroups`, {
+        method: 'PUT',
+        body: { subgroupIds },
+      }),
+    onMutate: async ({ userId, subgroupIds }) => {
+      await queryClient.cancelQueries({ queryKey: key, exact: true });
+      const previous = queryClient.getQueryData<GroupDetails>(key);
+      queryClient.setQueryData<GroupDetails>(
+        key,
+        (group) =>
+          group && {
+            ...group,
+            members: group.members.map((m) =>
+              m.user.id === userId
+                ? {
+                    ...m,
+                    subgroupIds,
+                    subgroupNames: group.subgroups
+                      .filter((s) => subgroupIds.includes(s.id))
+                      .map((s) => s.name),
+                  }
+                : m
+            ),
+          }
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => queryClient.setQueryData(key, context?.previous),
+    // Undergruppenes egne medlemslister endres også.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['groups'] }),
+  });
+}
+
 export function useSetInactive(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
