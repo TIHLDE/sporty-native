@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { Textarea } from '@/components/ui/textarea';
 import { useGiveFines, useGroup, useLaws } from '@/data/hooks';
+import { uploadFile } from '@/lib/api';
 import { useCloseParent } from '@/hooks/use-close-parent';
 import { formatFineCount, formatLaw } from '@/lib/fines';
 
@@ -26,7 +27,6 @@ export default function GiBotDetaljerScreen() {
   const law = useLaws(params.groupId).data?.find((l) => l.id === params.lawId);
   const group = useGroup(params.groupId).data;
   const members = group?.members ?? [];
-  // tihlde.org tar bare imot bilder som en offentlig lenke, og bildet ligger bare på telefonen.
   const fromTihlde = group?.fines.source === 'tihlde';
   const selectedIds = params.userIds.split(',');
   const users = members.map((m) => m.user).filter((user) => selectedIds.includes(user.id));
@@ -35,7 +35,8 @@ export default function GiBotDetaljerScreen() {
   const [chosenCount, setCount] = useState<number | null>(null);
   const count = chosenCount ?? Math.min(Math.max(law?.defaultCount ?? 1, 1), MAX_COUNT);
   const [reason, setReason] = useState('');
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [uploading, setUploading] = useState(false);
   const giveFines = useGiveFines();
   // Samme id for alle forsøk med dette skjemaet, så serveren ikke gir bøtene to ganger.
   const [requestId] = useState(() => Crypto.randomUUID());
@@ -48,7 +49,7 @@ export default function GiBotDetaljerScreen() {
       mediaTypes: ['images'],
       quality: 0.7,
     });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+    if (!result.canceled) setImage(result.assets[0]);
   };
 
   const takePhoto = async () => {
@@ -61,12 +62,31 @@ export default function GiBotDetaljerScreen() {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+    if (!result.canceled) setImage(result.assets[0]);
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (submitting.current) return;
     submitting.current = true;
+    // Bildet lastes opp først (blir WebP på serveren), og boten får bare id-en.
+    let imageUploadId: string | null = null;
+    if (image) {
+      setUploading(true);
+      try {
+        const uploaded = await uploadFile({
+          uri: image.uri,
+          name: image.fileName ?? 'bilde.jpg',
+          mimeType: image.mimeType ?? 'image/jpeg',
+        });
+        imageUploadId = uploaded.id;
+      } catch (error) {
+        submitting.current = false;
+        Alert.alert('Kunne ikke laste opp bildet', (error as Error).message);
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
     giveFines.mutate(
       {
         requestId,
@@ -75,8 +95,7 @@ export default function GiBotDetaljerScreen() {
         userIds: selectedIds,
         count,
         reason: reason.trim(),
-        // Bildet ligger foreløpig bare lokalt på telefonen. Opplasting til server kommer senere.
-        imageUri: fromTihlde ? null : imageUri,
+        imageUploadId,
       },
       {
         onSuccess: close,
@@ -148,41 +167,48 @@ export default function GiBotDetaljerScreen() {
           />
         </View>
 
-        {!fromTihlde && (
-          <View className="gap-3">
+        <View className="gap-3">
+          <View>
             <Text className="text-lg font-semibold">Bilde (valgfritt)</Text>
-            {imageUri ? (
-              <View>
-                <Image
-                  source={{ uri: imageUri }}
-                  style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16 }}
-                />
-                <Pressable
-                  onPress={() => setImageUri(null)}
-                  hitSlop={8}
-                  className="absolute right-3 top-3 size-8 items-center justify-center rounded-full bg-black/60">
-                  <Icon as={X} size={16} className="text-white" />
-                </Pressable>
-              </View>
-            ) : (
-              <View className="flex-row gap-3">
-                <ImageTile icon={ImagePlus} label="Velg bilde" onPress={pickImage} />
-                <ImageTile icon={Camera} label="Ta bilde" onPress={takePhoto} />
-              </View>
+            {fromTihlde && (
+              <Text className="text-muted-foreground text-sm">
+                Bildet vises også på boten på tihlde.org.
+              </Text>
             )}
           </View>
-        )}
+          {image ? (
+            <View>
+              <Image
+                source={{ uri: image.uri }}
+                style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16 }}
+              />
+              <Pressable
+                onPress={() => setImage(null)}
+                accessibilityLabel="Fjern bildet"
+                hitSlop={8}
+                className="absolute right-3 top-3 size-8 items-center justify-center rounded-full bg-black/60">
+                <Icon as={X} size={16} className="text-white" />
+              </Pressable>
+            </View>
+          ) : (
+            <View className="flex-row gap-3">
+              <ImageTile icon={ImagePlus} label="Velg bilde" onPress={pickImage} />
+              <ImageTile icon={Camera} label="Ta bilde" onPress={takePhoto} />
+            </View>
+          )}
+        </View>
       </FormScrollView>
 
       <BottomBar>
         <Button
           size="lg"
-          disabled={!reason.trim() || giveFines.isPending}
+          disabled={!reason.trim() || giveFines.isPending || uploading}
           className="bg-brand active:bg-brand/80 rounded-full"
           onPress={submit}>
           <Text className="text-white">
-            Gi {formatFineCount(count)}
-            {selectedIds.length > 1 ? ` til ${selectedIds.length} brukere` : ''}
+            {uploading
+              ? 'Laster opp bilde …'
+              : `Gi ${formatFineCount(count)}${selectedIds.length > 1 ? ` til ${selectedIds.length} brukere` : ''}`}
           </Text>
         </Button>
       </BottomBar>
