@@ -11,6 +11,7 @@ import { GroupBanner } from '@/components/sporty/group-banner';
 import { PaymentCard } from '@/components/sporty/payment-card';
 import { PollCard } from '@/components/sporty/poll-card';
 import { QueryState } from '@/components/sporty/query-state';
+import { StatsTab } from '@/components/sporty/stats-tab';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Separator } from '@/components/ui/separator';
@@ -38,6 +39,7 @@ const TABS = [
   { value: 'boter', label: 'Bøter' },
   { value: 'betalinger', label: 'Betalinger' },
   { value: 'filer', label: 'Filer' },
+  { value: 'statistikk', label: 'Statistikk' },
 ];
 
 export default function GroupScreen() {
@@ -123,6 +125,9 @@ function GroupView({ group }: { group: GroupDetails }) {
             </TabsContent>
             <TabsContent value="filer">
               <FilesTab groupId={group.id} />
+            </TabsContent>
+            <TabsContent value="statistikk">
+              <StatsTab group={group} />
             </TabsContent>
           </View>
         </ScrollView>

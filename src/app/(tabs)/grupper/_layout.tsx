@@ -10,6 +10,7 @@ export default function GrupperLayout() {
       />
       <Stack.Screen name="[groupId]/medlemmer" options={{ title: 'Medlemmer' }} />
       <Stack.Screen name="[groupId]/medlem/[userId]" options={{ title: 'Medlem' }} />
+      <Stack.Screen name="[groupId]/kamper" options={{ title: 'Kamper' }} />
       <Stack.Screen name="[groupId]/innstillinger" options={{ title: 'Innstillinger' }} />
       <Stack.Screen name="[groupId]/roller" options={{ title: 'Roller' }} />
       <Stack.Screen name="[groupId]/undergrupper" options={{ title: 'Undergrupper' }} />
