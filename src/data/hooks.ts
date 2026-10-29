@@ -1,6 +1,7 @@
 // Alle API-kall appen gjør, som React Query-hooks. Skjermene henter data kun herfra.
 
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -29,6 +30,7 @@ import type {
   GiveFinesInput,
   Group,
   GroupDetails,
+  GroupStats,
   GroupFile,
   GroupPosition,
   Law,
@@ -142,6 +144,18 @@ export const useAccessToken = () =>
 
 export const useMyFines = () =>
   useQuery({ queryKey: ['fines', 'mine'], queryFn: () => api<Fine[]>('/fines/mine') });
+
+/**
+ * Statistikk for gruppen. `period` er et semester («2026-H», «2026-V») eller «all»; null gir
+ * gjeldende semester. Forrige periode vises mens en ny hentes, så siden ikke blinker.
+ */
+export const useGroupStats = (groupId: string, period: string | null) =>
+  useQuery({
+    queryKey: ['stats', groupId, period],
+    queryFn: () =>
+      api<GroupStats>(`/groups/${groupId}/stats${period ? `?period=${period}` : ''}`),
+    placeholderData: keepPreviousData,
+  });
 
 export const useGroupPayments = (groupId: string) =>
   useQuery({

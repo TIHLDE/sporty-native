@@ -73,6 +73,20 @@ function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="statistikk-liste"
+            options={{
+              // Egen tittel i innholdet, se "opprett". Listen ruller, så faste høyder.
+              headerShown: false,
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.6, 1],
+              sheetGrabberVisible: true,
+            }}
+          />
+          <Stack.Screen
+            name="oppsummering"
+            options={{ presentation: 'fullScreenModal', headerShown: false }}
+          />
+          <Stack.Screen
             name="min-posisjon"
             options={{
               // Egen tittel i innholdet, se "opprett".
