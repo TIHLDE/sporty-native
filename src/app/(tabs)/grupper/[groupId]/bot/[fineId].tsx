@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { useAccessToken, useFine, useGroup, useSetFineStatus } from '@/data/hooks';
 import type { Fine, FineStatus } from '@/data/types';
+import { fileUrl } from '@/lib/api';
 import { formatEventStart } from '@/lib/dates';
 import { FINE_STATUS_LABEL, formatFineCount, formatLaw } from '@/lib/fines';
 
@@ -94,7 +95,8 @@ function FineImage({ fine }: { fine: Fine }) {
   return (
     <Image
       source={{
-        uri: fine.imageUrl!,
+        // tihlde.org-bilder er fulle lenker som krever token. Sporty-bilder er /api/uploads/….
+        uri: fine.source === 'tihlde' ? fine.imageUrl! : fileUrl(fine.imageUrl!),
         headers: fine.source === 'tihlde' ? { authorization: `Bearer ${token.data}` } : undefined,
       }}
       accessibilityLabel={`Bilde til boten til ${fine.user.name}`}

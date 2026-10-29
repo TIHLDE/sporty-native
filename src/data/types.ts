@@ -439,7 +439,8 @@ export interface GiveFinesInput {
   userIds: string[];
   count: number;
   reason: string;
-  imageUri: string | null;
+  /** Bilde lastet opp med uploadFile først. Vises på boten, også på tihlde.org. */
+  imageUploadId: string | null;
 }
 
 export interface Place extends Location {

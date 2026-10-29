@@ -2,6 +2,8 @@
 // går automatisk til Expo-dev-serveren som kjører API-rutene i src/app/api.
 
 import Constants from 'expo-constants';
+import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
 
 import type { UploadedFile } from '@/data/types';
 
@@ -91,11 +93,18 @@ export async function api<T>(
   return response.json() as Promise<T>;
 }
 
-/** Laster opp en lokal fil (fra bilde- eller filvelgeren) og returnerer den lagrede filen. */
+/**
+ * Laster opp en lokal fil (fra bilde- eller filvelgeren) og returnerer den lagrede filen. Bilder
+ * gjøres om til WebP og skaleres ned på serveren.
+ */
 export async function uploadFile(file: { uri: string; name: string; mimeType: string }) {
   const form = new FormData();
-  // React Native sender filen fra `uri` når den legges ved på denne formen.
-  form.append('file', { uri: file.uri, name: file.name, type: file.mimeType } as unknown as Blob);
+  // Expo sin fetch (global fetch i appen) godtar ikke React Native sitt gamle `{ uri, name, type }`
+  // («Unsupported FormDataPart implementation»). expo-file-system sin File er en Blob den kan sende.
+  // Filnavn og type tas fra filen selv (navnet tredje argument brukes bare på web). På web gir
+  // velgerne en blob:-adresse, som hentes som vanlig.
+  const blob = Platform.OS === 'web' ? await (await fetch(file.uri)).blob() : new File(file.uri);
+  form.append('file', blob as Blob, file.name);
 
   const response = await authedFetch(`${BASE_URL}/uploads`, { method: 'POST', body: form });
   if (!response.ok) {
