@@ -443,6 +443,26 @@ export interface GiveFinesInput {
   imageUploadId: string | null;
 }
 
+/** En person som ikke har gitt noen bot i gruppen siden valgt dato. */
+export interface Snitch {
+  id: string;
+  name: string;
+  email: string | null;
+  imageUrl: string | null;
+  finesReceived: number;
+}
+
+export interface GiveSnitchFinesInput {
+  /** Unik per utfylte skjema, så samme innsending ikke gir bøtene to ganger. */
+  requestId: string;
+  groupId: string;
+  /** Alle som ikke har gitt bot etter dette tidspunktet får bøter. */
+  since: string;
+  lawId: string;
+  count: number;
+  reason: string;
+}
+
 export interface Place extends Location {
   id: string | null;
 }
