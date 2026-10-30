@@ -443,8 +443,8 @@ export interface GiveFinesInput {
   imageUploadId: string | null;
 }
 
-/** En person som ikke har gitt noen bot i gruppen siden valgt dato. */
-export interface Snitch {
+/** En som ikke har snitchet: har ikke gitt noen bot i gruppen siden valgt dato, og får bøter. */
+export interface NonSnitch {
   id: string;
   name: string;
   email: string | null;
@@ -452,7 +452,8 @@ export interface Snitch {
   finesReceived: number;
 }
 
-export interface GiveSnitchFinesInput {
+/** Gi bøter til alle som ikke har snitchet (ikke gitt bot) siden `since`. */
+export interface GiveNonSnitchFinesInput {
   /** Unik per utfylte skjema, så samme innsending ikke gir bøtene to ganger. */
   requestId: string;
   groupId: string;

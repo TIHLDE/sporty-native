@@ -17,20 +17,19 @@ import { QueryState } from "@/components/sporty/query-state";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
-import { useGiveSnitchFines, useGroup, useLaws, useSnitches } from "@/data/hooks";
+import { useGiveNonSnitchFines, useGroup, useLaws, useNonSnitches } from "@/data/hooks";
 import { useCloseParent } from "@/hooks/use-close-parent";
 import { formatFineCount, formatLaw } from "@/lib/fines";
-import type { Law, Snitch } from "@/data/types";
-import { Screen } from "expo-router/build/views/Screen.js";
+import type { Law, NonSnitch } from "@/data/types";
 
 const MAX_COUNT = 20;
 
-/** Snitches: gi bøter til alle som ikke har gitt bot siden valgt dato. */
+/** Snitches: gi bøter til alle som ikke har snitchet (gitt bot) siden valgt dato. */
 export default function SnitchesScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const group = useGroup(groupId);
   const [date, setDate] = useState(new Date());
-  const snitches = useSnitches(groupId, date);
+  const nonSnitches = useNonSnitches(groupId, date);
   const laws = useLaws(groupId);
 
   if (group.data && !group.data.canManage) {
@@ -40,13 +39,13 @@ export default function SnitchesScreen() {
   }
 
   return (
-    <QueryState query={snitches}>
+    <QueryState query={nonSnitches}>
       {(data) => (
-        <SnitchList
+        <NonSnitchList
           groupId={groupId}
           date={date}
           setDate={setDate}
-          snitches={data}
+          nonSnitches={data}
           laws={laws.data ?? []}
         />
       )}
@@ -54,26 +53,26 @@ export default function SnitchesScreen() {
   );
 }
 
-function SnitchList({
+function NonSnitchList({
   groupId,
   date,
   setDate,
-  snitches,
+  nonSnitches,
   laws,
 }: {
   groupId: string;
   date: Date;
   setDate: (date: Date) => void;
-  snitches: Snitch[];
+  nonSnitches: NonSnitch[];
   laws: Law[];
 }) {
   const [selectedIds, setSelectedIds] = useState<string[] | null>(null);
   // Alle er valgt med mindre brukeren fjerner noen.
-  const selected = selectedIds ?? snitches.map((s) => s.id);
+  const selected = selectedIds ?? nonSnitches.map((s) => s.id);
   const [lawId, setLawId] = useState<string | null>(null);
   const [count, setCount] = useState(1);
   const [reason, setReason] = useState("");
-  const giveSnitchFines = useGiveSnitchFines();
+  const giveNonSnitchFines = useGiveNonSnitchFines();
   // Samme id for alle forsøk med dette skjemaet, så serveren ikke gir bøtene to ganger.
   const [requestId] = useState(() => Crypto.randomUUID());
   // Låses med en gang, før knappen rekker å bli deaktivert ved neste tegning (dobbelttrykk).
@@ -81,7 +80,7 @@ function SnitchList({
   const close = useCloseParent();
 
   const toggle = (id: string) => {
-    const base = selectedIds ?? snitches.map((s) => s.id);
+    const base = selectedIds ?? nonSnitches.map((s) => s.id);
     setSelectedIds(
       base.includes(id) ? base.filter((s) => s !== id) : [...base, id],
     );
@@ -90,7 +89,7 @@ function SnitchList({
   const submit = () => {
     if (submitting.current || !lawId) return;
     submitting.current = true;
-    giveSnitchFines.mutate(
+    giveNonSnitchFines.mutate(
       {
         requestId,
         groupId,
@@ -101,7 +100,10 @@ function SnitchList({
       },
       {
         onSuccess: (result) => {
-          Alert.alert("Ferdig", `${result.count} snitcher fikk bøter.`);
+          Alert.alert(
+            "Ferdig",
+            `${result.count} som ikke hadde snitchet fikk bøter.`,
+          );
           close();
         },
         onError: (error) => {
@@ -121,25 +123,25 @@ function SnitchList({
       >
         <View className="gap-3">
           <Text className="text-lg font-semibold">
-            Snitcher ({selected.length} valgt)
+            Får bøter ({selected.length} valgt)
           </Text>
-          {snitches.length === 0 && (
+          {nonSnitches.length === 0 && (
             <EmptyState text="Alle har gitt bøter siden denne datoen 🎉" />
           )}
-          {snitches.map((snitch) => (
+          {nonSnitches.map((nonSnitch) => (
             <Pressable
-              key={snitch.id}
-              onPress={() => toggle(snitch.id)}
+              key={nonSnitch.id}
+              onPress={() => toggle(nonSnitch.id)}
               className="flex-row items-center gap-3 py-2 active:opacity-70"
             >
               <Checkbox
-                checked={selected.includes(snitch.id)}
-                onCheckedChange={() => toggle(snitch.id)}
+                checked={selected.includes(nonSnitch.id)}
+                onCheckedChange={() => toggle(nonSnitch.id)}
               />
-              <UserAvatar user={snitch} className="size-10" />
-              <Text className="flex-1">{snitch.name}</Text>
+              <UserAvatar user={nonSnitch} className="size-10" />
+              <Text className="flex-1">{nonSnitch.name}</Text>
               <Text className="text-muted-foreground text-sm">
-                {snitch.finesReceived} bøter
+                {nonSnitch.finesReceived} bøter
               </Text>
             </Pressable>
           ))}
@@ -228,13 +230,14 @@ function SnitchList({
             !lawId ||
             !reason.trim() ||
             selected.length === 0 ||
-            giveSnitchFines.isPending
+            giveNonSnitchFines.isPending
           }
           className="bg-brand active:bg-brand/80 rounded-full"
           onPress={submit}
         >
           <Text className="text-white">
-            Gi {formatFineCount(count)} til {selected.length} snitcher
+            Gi {formatFineCount(count)} til {selected.length} som ikke har
+            snitchet
           </Text>
         </Button>
       </BottomBar>

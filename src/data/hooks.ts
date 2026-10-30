@@ -28,8 +28,8 @@ import type {
   FineStatus,
   FinesPage,
   GiveFinesInput,
-  GiveSnitchFinesInput,
-  Snitch,
+  GiveNonSnitchFinesInput,
+  NonSnitch,
   Group,
   GroupDetails,
   GroupStats,
@@ -820,22 +820,22 @@ export function useGiveFines() {
   });
 }
 
-/** Alle i gruppen som ikke har gitt noen bot siden `since`. */
-export const useSnitches = (groupId: string, since: Date) =>
+/** Alle i gruppen som ikke har snitchet (gitt bot) siden `since`. */
+export const useNonSnitches = (groupId: string, since: Date) =>
   useQuery({
     // Datoen i nøkkelen gjør at listen hentes på nytt når brukeren velger ny dato.
     queryKey: ['fines', 'snitches', groupId, since.toISOString()],
     queryFn: () =>
-      api<Snitch[]>(
+      api<NonSnitch[]>(
         `/fines/snitches?groupId=${groupId}&since=${encodeURIComponent(since.toISOString())}`
       ),
   });
 
-/** Gi bøter til alle snitchene på én gang. */
-export function useGiveSnitchFines() {
+/** Gi bøter til alle som ikke har snitchet, på én gang. */
+export function useGiveNonSnitchFines() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: GiveSnitchFinesInput) =>
+    mutationFn: (input: GiveNonSnitchFinesInput) =>
       api<{ count: number }>('/fines/snitches', { method: 'POST', body: input }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fines'] }),
   });
