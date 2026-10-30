@@ -32,9 +32,9 @@ export default function SnitchesScreen() {
   const nonSnitches = useNonSnitches(groupId, date);
   const laws = useLaws(groupId);
 
-  if (group.data && !group.data.canManage) {
+  if (group.data && !group.data.fines.canSnitch) {
     return (
-      <EmptyState text="Bare sub-/admin kan gi snitch-bøter" />
+      <EmptyState text="Bare botsjef eller sub-/admin kan gi snitch-bøter" />
     );
   }
 

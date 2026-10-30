@@ -250,8 +250,8 @@ function FinesTab({ group }: { group: GroupDetails }) {
               )}
             </View>
 
-            {/* Snitches gir masse bøter: bare sub-/admin (og botsjef/index). */}
-            {group.canManage && (
+            {/* Snitches gir masse bøter: botsjef og sub-/admin. */}
+            {group.fines.canSnitch && (
               <Link
                 href={{
                   pathname: "/gi-bot/snitches",
