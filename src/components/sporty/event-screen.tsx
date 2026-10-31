@@ -9,7 +9,7 @@ import {
   Tag,
   X,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import {
@@ -31,11 +31,11 @@ import { Icon } from '@/components/ui/icon';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
-import { useEvent, useGroup, useSetAttendance } from '@/data/hooks';
+import { useEvent, useGroup, useMarkEventSeen, useSetAttendance } from '@/data/hooks';
 import { useSession } from '@/data/session';
 import type { Event, Member } from '@/data/types';
 import { summarizeAttendance } from '@/lib/attendance';
-import { formatEventRange, formatEventStart } from '@/lib/dates';
+import { formatEventRange, formatEventStart, formatRelative } from '@/lib/dates';
 import { EVENT_TYPE_LABEL, locationLabel } from '@/lib/events';
 import { cn } from '@/lib/utils';
 
@@ -43,6 +43,11 @@ import { cn } from '@/lib/utils';
 export function EventScreen() {
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
   const event = useEvent(eventId);
+
+  // Registrer at arrangementet er åpnet, så sub-/admin ser det under «Ikke svart».
+  const { mutate: markSeen } = useMarkEventSeen(eventId);
+  useEffect(() => markSeen(), [markSeen]);
+
   return <QueryState query={event}>{(data) => <EventDetails event={data} />}</QueryState>;
 }
 
@@ -210,7 +215,15 @@ function EventDetails({ event }: { event: Event }) {
               )}
             </TabsContent>
             <TabsContent value="ubesvart">
-              <ParticipantList userIds={ubesvart} members={members} empty="Alle har svart 🎉" />
+              <ParticipantList
+                userIds={ubesvart}
+                members={members}
+                // Eldre backend sender ikke seenAt. Da vises ingenting, i stedet for «Ikke sett» på alle.
+                reasons={
+                  event.canManage && event.seenAt ? seenLabels(event, ubesvart) : undefined
+                }
+                empty="Alle har svart 🎉"
+              />
             </TabsContent>
             <TabsContent value="kommer_ikke">
               <ParticipantList
@@ -240,7 +253,20 @@ function InfoLine({ icon, text }: { icon: typeof MapPin; text: string }) {
   );
 }
 
-/** `reasons` brukes for «Kommer ikke»: begrunnelsen vises under navnet. */
+/** For sub-/admin under «Ikke svart»: om hver person har åpnet arrangementet, og når. */
+function seenLabels(event: Event, userIds: string[]) {
+  return Object.fromEntries(
+    userIds.map((id) => {
+      const seenAt = event.seenAt[id];
+      return [id, seenAt ? `Sett ${formatRelative(seenAt)}` : 'Ikke sett'];
+    })
+  );
+}
+
+/**
+ * `reasons` vises under navnet: begrunnelsen under «Kommer ikke», og om man har sett
+ * arrangementet under «Ikke svart» (bare for sub-/admin).
+ */
 function ParticipantList({
   userIds,
   members,

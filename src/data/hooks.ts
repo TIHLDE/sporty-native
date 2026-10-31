@@ -88,6 +88,15 @@ export const useUpcomingEvents = () =>
 export const useEvent = (eventId: string) =>
   useQuery({ queryKey: ['events', eventId], queryFn: () => api<Event>(`/events/${eventId}`) });
 
+/** Registrer at arrangementet er åpnet, så sub-/admin ser hvem som har sett det uten å svare. */
+export function useMarkEventSeen(eventId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api(`/events/${eventId}/seen`, { method: 'POST' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events', eventId] }),
+  });
+}
+
 export const useAnnouncements = (groupId?: string) =>
   useQuery({
     queryKey: ['announcements', groupId ?? 'mine'],
