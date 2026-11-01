@@ -1,5 +1,12 @@
 import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
-import { CircleDollarSign, FileImage, FileText, ListFilter, Plus } from 'lucide-react-native';
+import {
+  CircleDollarSign,
+  FaceAngry,
+  FileImage,
+  FileText,
+  ListFilter,
+  Plus,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, View, useColorScheme } from 'react-native';
 
@@ -242,6 +249,24 @@ function FinesTab({ group }: { group: GroupDetails }) {
                 </Link>
               )}
             </View>
+
+            {/* Snitches gir masse bøter: botsjef og sub-/admin. */}
+            {group.fines.canSnitch && (
+              <Link
+                href={{
+                  pathname: "/gi-bot/snitches",
+                  params: { groupId: group.id },
+                }}
+                asChild
+              >
+                <Button className="bg-brand active:bg-brand/80 rounded-full">
+                  <Icon as={FaceAngry} size={16} className="text-white" />
+                  <Text className="text-white">
+                    Snitches don{"'"}t get stitches
+                  </Text>
+                </Button>
+              </Link>
+            )}
 
             {fromTihlde && (
               <Text className="text-muted-foreground text-xs">

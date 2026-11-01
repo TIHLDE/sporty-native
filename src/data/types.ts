@@ -138,6 +138,8 @@ export interface GroupFinesInfo {
   canGive: boolean;
   /** Kan godkjenne, markere som betalt og avvise (botsjef og leder på tihlde.org). */
   canSettle: boolean;
+  /** Kan bruke snitches (gi massebot til alle som ikke har snitchet): botsjef og sub-/admin. */
+  canSnitch: boolean;
 }
 
 export interface Location {
@@ -441,6 +443,27 @@ export interface GiveFinesInput {
   reason: string;
   /** Bilde lastet opp med uploadFile først. Vises på boten, også på tihlde.org. */
   imageUploadId: string | null;
+}
+
+/** En som ikke har snitchet: har ikke gitt noen bot i gruppen siden valgt dato, og får bøter. */
+export interface NonSnitch {
+  id: string;
+  name: string;
+  email: string | null;
+  imageUrl: string | null;
+  finesReceived: number;
+}
+
+/** Gi bøter til alle som ikke har snitchet (ikke gitt bot) siden `since`. */
+export interface GiveNonSnitchFinesInput {
+  /** Unik per utfylte skjema, så samme innsending ikke gir bøtene to ganger. */
+  requestId: string;
+  groupId: string;
+  /** Alle som ikke har gitt bot etter dette tidspunktet får bøter. */
+  since: string;
+  lawId: string;
+  count: number;
+  reason: string;
 }
 
 export interface Place extends Location {
