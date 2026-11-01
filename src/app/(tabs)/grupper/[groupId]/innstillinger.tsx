@@ -5,6 +5,7 @@ import {
   ChevronRight,
   ClipboardList,
   FileSpreadsheet,
+  History,
   ImagePlus,
   ListOrdered,
   Trash2,
@@ -63,6 +64,10 @@ function Settings({ group }: { group: GroupDetails }) {
         )}
         <Link href={`/grupper/${group.id}/roller`} asChild>
           <Row icon={Users} label="Roller" detail={isAdmin ? undefined : 'Bare visning'} />
+        </Link>
+        <Separator />
+        <Link href={`/grupper/${group.id}/verv`} asChild>
+          <Row icon={History} label="Vervhistorikk" detail="Endres på nettsiden" />
         </Link>
       </Section>
 

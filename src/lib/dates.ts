@@ -11,6 +11,11 @@ const dayMonthYear = new Intl.DateTimeFormat(LOCALE, {
   year: 'numeric',
 });
 const time = new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' });
+const dayMonthShortYear = new Intl.DateTimeFormat(LOCALE, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
 
 /** "NOV" */
 export function formatMonthShort(iso: string) {
@@ -51,6 +56,24 @@ export function formatDateTimeShort(date: Date) {
 /** "13. oktober 2026" */
 export function formatDateLong(iso: string) {
   return dayMonthYear.format(new Date(iso));
+}
+
+/** En dato uten klokkeslett («2026-01-01») som lokal dato, så den ikke flytter seg med tidssonen. */
+function parseDateOnly(date: string) {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/** "1. jan. 2026 – 31. des. 2026" for to datoer som «2026-01-01». */
+export function formatDateOnlyRange(from: string, to: string) {
+  return `${dayMonthShortYear.format(parseDateOnly(from))} – ${dayMonthShortYear.format(parseDateOnly(to))}`;
+}
+
+/** Dagens dato som «2026-01-01». */
+export function todayDateOnly() {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 /** "nå", "for 5 min siden", "i går", "12. okt." */

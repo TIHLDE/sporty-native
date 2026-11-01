@@ -94,6 +94,11 @@ function MemberDetails({ group, member }: { group: GroupDetails; member: Member 
               <Text>Inaktiv</Text>
             </Badge>
           )}
+          {member.offices.map((name) => (
+            <Badge key={`verv-${name}`} variant="secondary">
+              <Text>{name}</Text>
+            </Badge>
+          ))}
           {member.subgroupNames.map((name) => (
             <Badge key={name} variant="outline">
               <Text>{name}</Text>

@@ -1,5 +1,5 @@
 import { Link, useLocalSearchParams } from 'expo-router';
-import { ChevronRight, Search } from 'lucide-react-native';
+import { ChevronRight, History, Search } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, Pressable, SectionList, View } from 'react-native';
 
@@ -64,6 +64,13 @@ function ListHeader({
           <Icon as={Search} size={16} className="text-muted-foreground" />
         </View>
       </View>
+      <Link href={`/grupper/${group.id}/verv`} asChild>
+        <Pressable className="bg-muted/60 flex-row items-center gap-3 rounded-2xl px-4 py-3 active:opacity-70">
+          <Icon as={History} size={18} />
+          <Text className="flex-1">Vervhistorikk</Text>
+          <Icon as={ChevronRight} size={18} className="text-muted-foreground" />
+        </Pressable>
+      </Link>
       <Text className="text-muted-foreground text-sm">
         {group.members.length} medlemmer
         {inactive > 0 ? ` · ${inactive} inaktive` : ''}
@@ -94,12 +101,13 @@ function InactiveBadge({ member }: { member: Member }) {
 
 /**
  * Grå linje under navnet: inaktiv-begrunnelsen hvis medlemmet er inaktivt (den får bare sub-/admin
- * og medlemmet selv), ellers undergruppene. Posisjonen står som overskrift når gruppen bruker dem.
+ * og medlemmet selv), ellers vervene nå og undergruppene. Posisjonen står som overskrift når
+ * gruppen bruker dem.
  */
 const subtitle = (member: Member) =>
   member.inactive?.reason
     ? `Inaktiv: ${member.inactive.reason}`
-    : member.subgroupNames.join(', ') || undefined;
+    : [...member.offices, ...member.subgroupNames].join(', ') || undefined;
 
 /** Én rad. Sub-/admin kan trykke for å åpne medlemmet og endre rolle, posisjon, undergrupper og status. */
 function MemberRow({ group, member }: { group: GroupDetails; member: Member }) {
