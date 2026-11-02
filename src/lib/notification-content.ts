@@ -52,14 +52,19 @@ export function messageContent(message: {
   };
 }
 
-type ReminderEvent = Pick<Event, 'id' | 'title' | 'groupName' | 'start' | 'location'>;
+type ReminderEvent = Pick<
+	Event,
+	'id' | 'title' | 'groupName' | 'start' | 'meetupAt' | 'location'
+>;
 
 export function eventStartContent(event: ReminderEvent): NotificationContent {
-  return {
-    title: `${event.title} om 1 time`,
-    body: `Kl. ${formatTime(event.start)} · ${event.location.name} · ${event.groupName}`,
-    url: `/arrangement/${event.id}`,
-  };
+	// Med oppmøtetid er det den som gjelder: folk skal møte før arrangementet starter.
+	const relevantTime = event.meetupAt ?? event.start;
+	return {
+		title: `${event.title} om 1 time`,
+		body: `Kl. ${formatTime(relevantTime)} · ${event.location.name} · ${event.groupName}`,
+		url: `/arrangement/${event.id}`,
+	};
 }
 
 export function signupDeadlineContent(

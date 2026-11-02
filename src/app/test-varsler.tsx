@@ -44,6 +44,7 @@ function sampleEvent(): Event {
     },
     start: start.toISOString(),
     end: null,
+    meetupAt: null,
     signupDeadline: start.toISOString(),
     maxAttendees: null,
     ourScore: null,
@@ -85,6 +86,11 @@ export default function TestVarslerScreen() {
       }),
     },
     { icon: CalendarClock, label: '1 time før arrangement', content: eventStartContent(event) },
+    {
+      icon: CalendarClock,
+      label: '1 time før oppmøtetid (kamp med samling)',
+      content: eventStartContent({ ...sampleEvent(), meetupAt: sampleEvent().start }),
+    },
     {
       icon: Bell,
       label: '1 time før påmeldingsfrist (ikke svart)',

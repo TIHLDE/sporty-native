@@ -13,6 +13,8 @@ export interface EventDraft {
   start: Date;
   /** null = ingen sluttid. */
   end: Date | null;
+  /** null = ingen oppmøtetid. Når folk møtes, f.eks. 30 min før start. */
+  meetupAt: Date | null;
   location: Location | null;
   description: string;
   /** null = ingen påmeldingsfrist. */
@@ -37,6 +39,7 @@ export function draftFromEvent(event: Event): EventDraft {
     opponent: event.opponent ?? '',
     start: new Date(event.start),
     end: event.end ? new Date(event.end) : null,
+    meetupAt: event.meetupAt ? new Date(event.meetupAt) : null,
     location: event.location,
     description: event.description,
     signupDeadline: event.signupDeadline ? new Date(event.signupDeadline) : null,
@@ -60,6 +63,7 @@ export function EventDraftProvider({ children }: PropsWithChildren) {
     opponent: '',
     start: defaultStart(),
     end: null,
+    meetupAt: null,
     location: null,
     description: '',
     signupDeadline: null,

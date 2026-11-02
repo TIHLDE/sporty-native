@@ -61,6 +61,10 @@ function EventForm({ groupId, editing }: { groupId: string; editing?: Event }) {
   const close = useCloseParent();
 
   const endError = draft.end && draft.end <= draft.start ? 'Sluttid må være etter starttid' : null;
+  const meetupError =
+    draft.meetupAt && draft.meetupAt >= draft.start
+      ? 'Oppmøtetid må være før starttiden'
+      : null;
   const deadlineError =
     draft.signupDeadline && draft.signupDeadline > draft.start
       ? 'Fristen må være før arrangementet starter'
@@ -71,13 +75,25 @@ function EventForm({ groupId, editing }: { groupId: string; editing?: Event }) {
       ? 'Skriv et helt tall over 0'
       : null;
   const canSubmit = Boolean(
-    draft.title.trim() && draft.location && !endError && !deadlineError && !maxAttendeesError
+    draft.title.trim() &&
+      draft.location &&
+      !endError &&
+      !meetupError &&
+      !deadlineError &&
+      !maxAttendeesError
   );
 
   const setStart = (start: Date) => {
-    // Flytt sluttiden med, så varigheten beholdes.
+    // Flytt sluttiden og oppmøtetiden med, så varighet og oppmøte-margin beholdes.
     const duration = draft.end ? draft.end.getTime() - draft.start.getTime() : 0;
-    update({ start, end: draft.end ? new Date(start.getTime() + duration) : null });
+    const meetupOffset = draft.meetupAt
+      ? draft.meetupAt.getTime() - draft.start.getTime()
+      : 0;
+    update({
+      start,
+      end: draft.end ? new Date(start.getTime() + duration) : null,
+      meetupAt: draft.meetupAt ? new Date(start.getTime() + meetupOffset) : null,
+    });
   };
 
   const submit = () => {
@@ -89,6 +105,7 @@ function EventForm({ groupId, editing }: { groupId: string; editing?: Event }) {
         opponent: draft.type === 'kamp' ? draft.opponent.trim() || null : null,
         start: draft.start.toISOString(),
         end: draft.end?.toISOString() ?? null,
+        meetupAt: draft.meetupAt?.toISOString() ?? null,
         location: draft.location,
         description: draft.description.trim(),
         signupDeadline: draft.signupDeadline?.toISOString() ?? null,
@@ -150,6 +167,23 @@ function EventForm({ groupId, editing }: { groupId: string; editing?: Event }) {
             minimumDate={editing ? undefined : new Date()}
           />
         </Field>
+
+        <ToggleField
+          label="Oppmøtetid"
+          enabled={draft.meetupAt !== null}
+          // Forslag: 30 minutter før start, f.eks. samling før kamp.
+          onToggle={(on) =>
+            update({ meetupAt: on ? new Date(draft.start.getTime() - 30 * 60 * 1000) : null })
+          }
+          error={meetupError}>
+          {draft.meetupAt && (
+            <DateTimeField
+              value={draft.meetupAt}
+              onChange={(meetupAt) => update({ meetupAt })}
+              maximumDate={draft.start}
+            />
+          )}
+        </ToggleField>
 
         <ToggleField
           label="Sluttid"

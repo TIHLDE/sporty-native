@@ -1,4 +1,4 @@
-import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
+import { Link, Stack, router, useLocalSearchParams } from "expo-router";
 import {
   CalendarDays,
   Check,
@@ -7,37 +7,47 @@ import {
   Pencil,
   Swords,
   Tag,
+  Users,
   X,
-} from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+} from "lucide-react-native";
+import { useEffect, useState } from "react";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 
 import {
   CollectiveFineButton,
   canGiveCollectiveFine,
-} from '@/components/sporty/collective-fine-button';
-import { EmptyState } from '@/components/sporty/empty-state';
-import { EventMap } from '@/components/sporty/event-map';
-import { MatchFactsSection } from '@/components/sporty/match-facts';
+} from "@/components/sporty/collective-fine-button";
+import { EmptyState } from "@/components/sporty/empty-state";
+import { EventMap } from "@/components/sporty/event-map";
+import { MatchFactsSection } from "@/components/sporty/match-facts";
 import {
   ChoosePositionPrompt,
   ParticipantsByPosition,
   eventPositions,
-} from '@/components/sporty/positions';
-import { QueryState } from '@/components/sporty/query-state';
-import { UserRow } from '@/components/sporty/user-row';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Text } from '@/components/ui/text';
-import { useEvent, useGroup, useMarkEventSeen, useSetAttendance } from '@/data/hooks';
-import { useSession } from '@/data/session';
-import type { Event, Member } from '@/data/types';
-import { summarizeAttendance } from '@/lib/attendance';
-import { formatEventRange, formatEventStart, formatRelative } from '@/lib/dates';
-import { EVENT_TYPE_LABEL, locationLabel } from '@/lib/events';
-import { cn } from '@/lib/utils';
+} from "@/components/sporty/positions";
+import { QueryState } from "@/components/sporty/query-state";
+import { UserRow } from "@/components/sporty/user-row";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Text } from "@/components/ui/text";
+import {
+  useEvent,
+  useGroup,
+  useMarkEventSeen,
+  useSetAttendance,
+} from "@/data/hooks";
+import { useSession } from "@/data/session";
+import type { Event, Member } from "@/data/types";
+import { summarizeAttendance } from "@/lib/attendance";
+import {
+  formatEventRange,
+  formatEventStart,
+  formatRelative,
+} from "@/lib/dates";
+import { EVENT_TYPE_LABEL, locationLabel } from "@/lib/events";
+import { cn } from "@/lib/utils";
 
 /** Arrangementssiden. Brukes av både Hjem- og Grupper-fanen, så den skyves inn i fanen man står i. */
 export function EventScreen() {
@@ -48,45 +58,69 @@ export function EventScreen() {
   const { mutate: markSeen } = useMarkEventSeen(eventId);
   useEffect(() => markSeen(), [markSeen]);
 
-  return <QueryState query={event}>{(data) => <EventDetails event={data} />}</QueryState>;
+  return (
+    <QueryState query={event}>
+      {(data) => <EventDetails event={data} />}
+    </QueryState>
+  );
 }
 
 function EventDetails({ event }: { event: Event }) {
   const { userId } = useSession();
   const group = useGroup(event.groupId);
   const setAttendance = useSetAttendance(event.id);
-  const [tab, setTab] = useState('kommer');
+  const [tab, setTab] = useState("kommer");
   const now = new Date();
   const isPast = new Date(event.end ?? event.start) < now;
-  const deadlinePassed = event.signupDeadline !== null && new Date(event.signupDeadline) < now;
+  const deadlinePassed =
+    event.signupDeadline !== null && new Date(event.signupDeadline) < now;
   const isMember = event.memberIds.includes(userId);
   const notStarted = new Date(event.start) > now;
   // Fullt: ingen nye kan si «Kommer», men de som allerede kommer beholder plassen.
-  const comingCount = Object.values(event.attendance).filter((s) => s === 'kommer').length;
+  const comingCount = Object.values(event.attendance).filter(
+    (s) => s === "kommer",
+  ).length;
   const full =
     event.maxAttendees !== null &&
     comingCount >= event.maxAttendees &&
-    event.attendance[userId] !== 'kommer';
+    event.attendance[userId] !== "kommer";
 
   // Vis svaret med en gang mens forespørselen pågår.
   const shownEvent: Event =
     setAttendance.isPending && setAttendance.variables
-      ? { ...event, attendance: { ...event.attendance, [userId]: setAttendance.variables.status } }
+      ? {
+          ...event,
+          attendance: {
+            ...event.attendance,
+            [userId]: setAttendance.variables.status,
+          },
+        }
       : event;
-  const { myStatus, kommer, kommerIkke, ubesvart } = summarizeAttendance(shownEvent, userId);
-  const members = new Map((group.data?.members ?? []).map((m) => [m.user.id, m]));
+  const { myStatus, kommer, kommerIkke, ubesvart } = summarizeAttendance(
+    shownEvent,
+    userId,
+  );
+  const members = new Map(
+    (group.data?.members ?? []).map((m) => [m.user.id, m]),
+  );
   // Posisjonene i gruppen på kamper og treninger. Da deles «Kommer» inn etter posisjon.
   const positions = eventPositions(event, group.data);
-  const missingMyPosition = isMember && positions.length > 0 && !members.get(userId)?.position;
+  const missingMyPosition =
+    isMember && positions.length > 0 && !members.get(userId)?.position;
 
   const comeAnyway = () =>
     setAttendance.mutate(
-      { status: 'kommer' },
-      { onError: (error) => Alert.alert('Kunne ikke lagre svaret', error.message) }
+      { status: "kommer" },
+      {
+        onError: (error) =>
+          Alert.alert("Kunne ikke lagre svaret", error.message),
+      },
     );
   // «Kommer ikke» krever begrunnelse, så den skrives i et eget ark (også for å endre den).
-  const sendRegrets = () => router.push({ pathname: '/avbud', params: { eventId: event.id } });
-  const myReason = event.absenceReasons[userId];
+  const sendRegrets = () =>
+    router.push({ pathname: "/avbud", params: { eventId: event.id } });
+  const absenceReasons = event.absenceReasons ?? {};
+  const myReason = absenceReasons[userId] ?? "N/A";
 
   return (
     <>
@@ -97,11 +131,16 @@ function EventDetails({ event }: { event: Event }) {
             event.canManage && !isPast ? (
               <Link
                 href={{
-                  pathname: '/nytt-arrangement/detaljer',
+                  pathname: "/nytt-arrangement/detaljer",
                   params: { eventId: event.id, forGroupId: event.groupId },
                 }}
-                asChild>
-                <Pressable hitSlop={8} className="px-1" accessibilityLabel="Rediger arrangement">
+                asChild
+              >
+                <Pressable
+                  hitSlop={8}
+                  className="px-1"
+                  accessibilityLabel="Rediger arrangement"
+                >
                   <Icon as={Pencil} size={20} />
                 </Pressable>
               </Link>
@@ -110,30 +149,49 @@ function EventDetails({ event }: { event: Event }) {
       />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="gap-6 p-4 pb-32">
+        contentContainerClassName="gap-6 p-4 pb-32"
+      >
         <View className="gap-3">
-          <Text className="text-muted-foreground text-sm">{event.groupName}</Text>
+          <Text className="text-muted-foreground text-sm">
+            {event.groupName}
+          </Text>
           <Text variant="h3">{event.title}</Text>
           <InfoLine icon={Tag} text={EVENT_TYPE_LABEL[event.type]} />
-          {event.opponent && <InfoLine icon={Swords} text={`Mot ${event.opponent}`} />}
-          <InfoLine icon={CalendarDays} text={formatEventRange(event.start, event.end)} />
+          {event.opponent && (
+            <InfoLine icon={Swords} text={`Mot ${event.opponent}`} />
+          )}
+          <InfoLine
+            icon={CalendarDays}
+            text={formatEventRange(event.start, event.end)}
+          />
+          {event.meetupAt && (
+            <InfoLine
+              icon={Users}
+              text={`Oppmøte ${formatEventStart(event.meetupAt)}`}
+            />
+          )}
           <InfoLine icon={MapPin} text={locationLabel(event.location)} />
           {event.signupDeadline && (
             <InfoLine
               icon={Hourglass}
-              text={`${deadlinePassed ? 'Påmeldingen stengte' : 'Påmeldingsfrist'} ${formatEventStart(event.signupDeadline)}`}
+              text={`${deadlinePassed ? "Påmeldingen stengte" : "Påmeldingsfrist"} ${formatEventStart(event.signupDeadline)}`}
             />
           )}
-          {event.description ? <Text className="leading-6">{event.description}</Text> : null}
+          {event.description ? (
+            <Text className="leading-6">{event.description}</Text>
+          ) : null}
         </View>
 
-        {event.type === 'kamp' && !notStarted && <MatchFactsSection event={event} />}
+        {event.type === "kamp" && !notStarted && (
+          <MatchFactsSection event={event} />
+        )}
 
         <EventMap location={event.location} />
 
         {!isPast && isMember && deadlinePassed && (
           <Text className="text-muted-foreground text-center text-sm">
-            Påmeldingsfristen har gått ut. Ta kontakt med sub-/admin hvis du må endre svaret.
+            Påmeldingsfristen har gått ut. Ta kontakt med sub-/admin hvis du må
+            endre svaret.
           </Text>
         )}
         {!isPast && isMember && !deadlinePassed && (
@@ -141,45 +199,57 @@ function EventDetails({ event }: { event: Event }) {
             <Button
               disabled={full}
               className={cn(
-                'flex-1 rounded-full',
-                myStatus === 'kommer' && 'bg-green-600 active:bg-green-700'
+                "flex-1 rounded-full",
+                myStatus === "kommer" && "bg-green-600 active:bg-green-700",
               )}
-              variant={myStatus === 'kommer' ? 'default' : 'outline'}
-              onPress={comeAnyway}>
+              variant={myStatus === "kommer" ? "default" : "outline"}
+              onPress={comeAnyway}
+            >
               <Icon
                 as={Check}
                 size={16}
-                className={myStatus === 'kommer' ? 'text-white' : undefined}
+                className={myStatus === "kommer" ? "text-white" : undefined}
               />
-              <Text className={myStatus === 'kommer' ? 'text-white' : undefined}>
-                {full ? 'Fullt' : 'Kommer'}
+              <Text
+                className={myStatus === "kommer" ? "text-white" : undefined}
+              >
+                {full ? "Fullt" : "Kommer"}
               </Text>
             </Button>
             <Button
               className={cn(
-                'flex-1 rounded-full',
-                myStatus === 'kommer_ikke' && 'bg-red-600 active:bg-red-700'
+                "flex-1 rounded-full",
+                myStatus === "kommer_ikke" && "bg-red-600 active:bg-red-700",
               )}
-              variant={myStatus === 'kommer_ikke' ? 'default' : 'outline'}
-              onPress={sendRegrets}>
+              variant={myStatus === "kommer_ikke" ? "default" : "outline"}
+              onPress={sendRegrets}
+            >
               <Icon
                 as={X}
                 size={16}
-                className={myStatus === 'kommer_ikke' ? 'text-white' : undefined}
+                className={
+                  myStatus === "kommer_ikke" ? "text-white" : undefined
+                }
               />
-              <Text className={myStatus === 'kommer_ikke' ? 'text-white' : undefined}>
+              <Text
+                className={
+                  myStatus === "kommer_ikke" ? "text-white" : undefined
+                }
+              >
                 Kommer ikke
               </Text>
             </Button>
           </View>
         )}
-        {!isPast && isMember && myStatus === 'kommer_ikke' && myReason && (
+        {!isPast && isMember && myStatus === "kommer_ikke" && myReason && (
           <Text className="text-muted-foreground -mt-2 text-center text-sm">
             Din begrunnelse: {myReason}
-            {!deadlinePassed && ' · trykk «Kommer ikke» for å endre'}
+            {!deadlinePassed && " · trykk «Kommer ikke» for å endre"}
           </Text>
         )}
-        {!isPast && missingMyPosition && <ChoosePositionPrompt groupId={event.groupId} />}
+        {!isPast && missingMyPosition && (
+          <ChoosePositionPrompt groupId={event.groupId} />
+        )}
 
         <View className="gap-3">
           <Text variant="h4">Deltakere</Text>
@@ -220,7 +290,9 @@ function EventDetails({ event }: { event: Event }) {
                 members={members}
                 // Eldre backend sender ikke seenAt. Da vises ingenting, i stedet for «Ikke sett» på alle.
                 reasons={
-                  event.canManage && event.seenAt ? seenLabels(event, ubesvart) : undefined
+                  event.canManage && event.seenAt
+                    ? seenLabels(event, ubesvart)
+                    : undefined
                 }
                 empty="Alle har svart 🎉"
               />
@@ -258,8 +330,8 @@ function seenLabels(event: Event, userIds: string[]) {
   return Object.fromEntries(
     userIds.map((id) => {
       const seenAt = event.seenAt[id];
-      return [id, seenAt ? `Sett ${formatRelative(seenAt)}` : 'Ikke sett'];
-    })
+      return [id, seenAt ? `Sett ${formatRelative(seenAt)}` : "Ikke sett"];
+    }),
   );
 }
 
