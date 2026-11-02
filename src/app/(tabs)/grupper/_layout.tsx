@@ -21,6 +21,7 @@ export default function GrupperLayout() {
       <Stack.Screen name="[groupId]/velg-medlemmer" options={{ title: 'Velg medlemmer' }} />
       <Stack.Screen name="[groupId]/posisjoner" options={{ title: 'Posisjoner' }} />
       <Stack.Screen name="[groupId]/kampfakta" options={{ title: 'Kampfakta' }} />
+      <Stack.Screen name="[groupId]/verv" options={{ title: 'Vervhistorikk' }} />
       <Stack.Screen name="[groupId]/bot/[fineId]" options={{ title: 'Bot' }} />
       <Stack.Screen name="[groupId]/betaling/[paymentId]" options={{ title: 'Betaling' }} />
       <Stack.Screen name="[groupId]/varsler" options={{ title: 'Varsler' }} />

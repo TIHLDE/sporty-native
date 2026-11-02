@@ -43,6 +43,7 @@ import type {
   MessagePage,
   Notification,
   NotificationSettings,
+  OfficeHistory,
   PaymentRequest,
   Place,
   Poll,
@@ -166,6 +167,13 @@ export const useGroupStats = (groupId: string, period: string | null) =>
     queryFn: () =>
       api<GroupStats>(`/groups/${groupId}/stats${period ? `?period=${period}` : ''}`),
     placeholderData: keepPreviousData,
+  });
+
+/** Vervhistorikken til laget. Bare visning i appen; den endres på nettsiden. */
+export const useOfficeHistory = (groupId: string) =>
+  useQuery({
+    queryKey: ['offices', groupId],
+    queryFn: () => api<OfficeHistory>(`/groups/${groupId}/offices`),
   });
 
 export const useGroupPayments = (groupId: string) =>

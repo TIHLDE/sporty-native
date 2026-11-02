@@ -24,6 +24,15 @@ export function fileUrl(path: string) {
   return `${ORIGIN}${path}`;
 }
 
+/**
+ * Full adresse til en side på nettsiden, f.eks. `/grupper/<id>/innstillinger`. Nettsiden og API-et
+ * ligger på samme domene (EXPO_PUBLIC_API_URL). I utvikling peker den på dev-serveren, som ikke har
+ * nettsiden.
+ */
+export function websiteUrl(path: string) {
+  return `${ORIGIN}${path}`;
+}
+
 /** Kun i utvikling: brukeren vi opptrer som (Bytt bruker). Settes av SessionProvider. */
 let actAsUserId: string | null = null;
 
