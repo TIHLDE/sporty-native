@@ -168,11 +168,13 @@ export function buildReminders(
 ): Reminder[] {
   const reminders: Reminder[] = [];
   for (const event of events) {
-    const startAt = new Date(event.start).getTime() - REMINDER_LEAD_MS;
-    if (options.eventStart && startAt > now) {
+    // Med oppmøtetid minner vi om den: det er da folk skal møte, ikke når det starter.
+    const relevantTime = event.meetupAt ?? event.start;
+    const remindAt = new Date(relevantTime).getTime() - REMINDER_LEAD_MS;
+    if (options.eventStart && remindAt > now) {
       reminders.push({
         id: `${REMINDER_PREFIX}start:${event.id}`,
-        date: new Date(startAt),
+        date: new Date(remindAt),
         content: eventStartContent(event),
       });
     }
