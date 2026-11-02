@@ -44,6 +44,7 @@ function sampleEvent(): Event {
     },
     start: start.toISOString(),
     end: null,
+    meetupAt: null,
     signupDeadline: start.toISOString(),
     maxAttendees: null,
     ourScore: null,
