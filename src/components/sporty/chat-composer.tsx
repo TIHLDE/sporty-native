@@ -46,6 +46,8 @@ const PANEL_TABS: { value: PanelTab; label: string }[] = [
 
 /** Avstanden mellom kapselen og det som ligger under den. */
 const GAP = 8;
+/** Høyden på kapselen med én linje tekst. */
+const DOCK_HEIGHT = 56;
 /** Høyden på panelet før tastaturet har vært oppe, så vi vet hvor høyt det er. */
 const DEFAULT_PANEL_HEIGHT = 336;
 /** Hvor mye av skjermen panelet tar når det er dratt opp. */
@@ -68,7 +70,8 @@ export function useComposerLayout(bottomInset: number) {
   const { height: keyboard } = useReanimatedKeyboardAnimation();
   const { height: windowHeight } = useWindowDimensions();
   const panelHeight = useSharedValue(0);
-  const dockHeight = useSharedValue(56);
+  const dockHeight = useSharedValue(DOCK_HEIGHT);
+  const [dockSize, setDockSize] = useState(DOCK_HEIGHT);
   const searching = useSharedValue(false);
   const [open, setOpen] = useState(false);
   const [tall, setTall] = useState(false);
@@ -136,9 +139,25 @@ export function useComposerLayout(bottomInset: number) {
     return Math.max(base, keyboardOpen + GAP, panelTop);
   });
 
-  // Listen skal ikke ha innhold bak kapselen. Tastaturet regner KeyboardChatScrollView med selv.
-  const extraContentPadding = useDerivedValue(
-    () => dockHeight.get() + lift.get() - Math.abs(keyboard.get())
+  // Plassen under meldingene når ingenting er åpent. Den må ligge i selve listen: et innrykk flytter
+  // ikke listen ved åpning, så den nyeste meldingen ville havnet bak kapselen.
+  // Følger høyden på kapselen, så flere linjer eller svar-stripen ikke dekker meldingene.
+  const restingPadding = dockSize + base;
+  // KeyboardChatScrollView løfter listen med tastaturhøyden minus denne.
+  const keyboardOffset = Math.max(base - GAP, 0);
+
+  // Det som mangler for at innholdet skal stå over kapselen, utover de to over.
+  const extraContentPadding = useDerivedValue(() => {
+    const fromKeyboard = Math.max(Math.abs(keyboard.get()) - keyboardOffset, 0);
+    return Math.max(dockHeight.get() + lift.get() - restingPadding - fromKeyboard, 0);
+  });
+
+  const onDockLayout = useCallback(
+    (height: number) => {
+      dockHeight.set(height);
+      setDockSize(height);
+    },
+    [dockHeight]
   );
 
   const dockStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -lift.get() }] }));
@@ -154,9 +173,11 @@ export function useComposerLayout(bottomInset: number) {
     closePanel,
     setPanelTall,
     onSearchFocusChange,
-    dockHeight,
+    onDockLayout,
     dockStyle,
     panelStyle,
+    restingPadding,
+    keyboardOffset,
     extraContentPadding,
   };
 }
@@ -268,7 +289,7 @@ export function ChatComposer({
 
       <Animated.View
         style={layout.dockStyle}
-        onLayout={(event) => layout.dockHeight.set(event.nativeEvent.layout.height)}
+        onLayout={(event) => layout.onDockLayout(event.nativeEvent.layout.height)}
         className="absolute inset-x-3 bottom-0 gap-1.5">
         {target && (
           <Surface>

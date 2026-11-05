@@ -4,6 +4,7 @@ import {
   Bell,
   CalendarDays,
   CircleDollarSign,
+  Flag,
   Megaphone,
   UserCheck,
   Wallet,
@@ -24,6 +25,7 @@ const ICONS: Record<NotificationType, typeof Bell> = {
   announcement: Megaphone,
   poll: BarChart3,
   payment: Wallet,
+  report: Flag,
 };
 
 export function NotificationRow({ notification }: { notification: Notification }) {

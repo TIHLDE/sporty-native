@@ -32,6 +32,9 @@ Kopier denne blokken til toppen av listen under, og ta bare med kategoriene som 
 
 ### ✨ Feature
 
+- **Rapportering og blokkering**: hold inne en melding for å rapportere den eller blokkere avsenderen. Sub-/admin behandler rapporter under Profil, og blokkerte personer finnes samme sted
+- **Rapportering av kommentarer**: hold inne en kommentar for å rapportere den eller blokkere den som skrev den
+- **Brukervilkår**: alle må godta vilkårene for å bruke appen, og de kan leses under Profil sammen med personvernerklæringen til TIHLDE og en lenke til kontoen hos TIHLDE
 - **GIF-er i meldinger**: send GIF-er fra Klipy, og lagre favoritter med stjernen eller ved å holde inne en GIF, også i chatten
 - **Emoji- og GIF-panel**: emoji-knappen åpner et panel med Emoji, GIF og Favoritter der tastaturet ellers er. Dra i streken for full høyde
 
@@ -50,6 +53,7 @@ Kopier denne blokken til toppen av listen under, og ta bare med kategoriene som 
 ### 🐛 Fix
 
 - Fanene på gruppesiden fester seg nå under headeren i stedet for bak statuslinjen og tilbakeknappen
+- Tittelen og knappene øverst på gruppesiden var svarte mot banneret i lys modus. De er nå hvite over banneret og bytter farge når fanene fester seg
 - Logoen i oppstartsanimasjonen ble kuttet øverst og nederst. Den vises nå i full høyde, samme størrelse som splash-skjermen
 
 ## 2026-10-14 (backend flyttet til Sporty v3)

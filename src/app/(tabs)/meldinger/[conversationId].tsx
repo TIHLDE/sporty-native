@@ -2,7 +2,17 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Check, CheckCheck, Copy, Pencil, Reply, Star, Trash2 } from 'lucide-react-native';
+import {
+  Ban,
+  Check,
+  CheckCheck,
+  Copy,
+  Flag,
+  Pencil,
+  Reply,
+  Star,
+  Trash2,
+} from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -36,9 +46,10 @@ import {
   useMe,
   useMessages,
 } from '@/data/hooks';
-import type { ConversationDetails, Message, User } from '@/data/types';
+import { useBlockUser, useReportMessage } from '@/data/moderation';
+import type { ConversationDetails, Message, ReportReason, User } from '@/data/types';
 import { formatTime } from '@/lib/dates';
-import { canStillChange } from '@/lib/messages';
+import { REPORT_REASONS, canStillChange } from '@/lib/messages';
 import { setOpenScreen } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 
@@ -101,6 +112,40 @@ function Chat({ conversation, me }: { conversation: ConversationDetails; me: Use
   const layout = useComposerLayout(insets.bottom);
   const favorites = useFavoriteGifs();
   const { mutate: toggleFavorite } = useToggleFavoriteGif();
+  const { mutate: reportMessage } = useReportMessage(conversation.id);
+  const { mutate: blockUser } = useBlockUser();
+
+  const report = (message: Message) => {
+    const send = (reason: ReportReason) =>
+      reportMessage(
+        { messageId: message.id, reason },
+        {
+          onSuccess: () => Alert.alert('Takk', 'Meldingen er rapportert.'),
+          onError: (error) => Alert.alert('Rapporten ble ikke sendt', error.message),
+        }
+      );
+    Alert.alert('Hvorfor rapporterer du meldingen?', undefined, [
+      ...REPORT_REASONS.map((r) => ({ text: r.label, onPress: () => send(r.value) })),
+      { text: 'Avbryt', style: 'cancel' },
+    ]);
+  };
+
+  const block = (user: User) =>
+    Alert.alert(
+      `Blokkere ${user.name}?`,
+      'Du ser ikke lenger meldingene deres, og dere kan ikke sende direktemeldinger til hverandre.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Blokker',
+          style: 'destructive',
+          onPress: () =>
+            blockUser(user.id, {
+              onError: (error) => Alert.alert('Personen ble ikke blokkert', error.message),
+            }),
+        },
+      ]
+    );
 
   const all = messages.data?.pages.flatMap((p) => p.messages) ?? [];
   const newestId = all[0]?.id;
@@ -150,6 +195,8 @@ function Chat({ conversation, me }: { conversation: ConversationDetails; me: Use
           keyExtractor={(m) => m.id}
           className="flex-1"
           contentContainerClassName="px-3 py-3"
+          // Listen er snudd, så hodet er nederst på skjermen, under den nyeste meldingen.
+          ListHeaderComponent={<View style={{ height: layout.restingPadding }} />}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           onScrollBeginDrag={() => layout.open && layout.closePanel()}
@@ -157,6 +204,7 @@ function Chat({ conversation, me }: { conversation: ConversationDetails; me: Use
             <KeyboardChatScrollView
               {...props}
               inverted
+              offset={layout.keyboardOffset}
               extraContentPadding={layout.extraContentPadding}
             />
           )}
@@ -238,6 +286,8 @@ function Chat({ conversation, me }: { conversation: ConversationDetails; me: Use
                 toggleFavorite({ gif: { ...menu.message.gif, title: '' }, favorite });
               }
             },
+            report: () => report(menu.message),
+            block: () => block(menu.message.sender),
             reply: () => setTarget({ mode: 'reply', message: menu.message }),
             edit: () => {
               setTarget({ mode: 'edit', message: menu.message });
@@ -272,6 +322,8 @@ function messageActions(
   handlers: {
     isFavorite: boolean;
     toggleFavorite: (favorite: boolean) => void;
+    report: () => void;
+    block: () => void;
     reply: () => void;
     edit: () => void;
     remove: () => void;
@@ -300,6 +352,17 @@ function messageActions(
     ...(mine
       ? [{ label: 'Slett', icon: Trash2, onPress: handlers.remove, destructive: true }]
       : []),
+    ...(message.sender.id === me.id
+      ? []
+      : [
+          { label: 'Rapporter', icon: Flag, onPress: handlers.report },
+          {
+            label: `Blokker ${message.sender.name.split(' ')[0]}`,
+            icon: Ban,
+            onPress: handlers.block,
+            destructive: true,
+          },
+        ]),
   ];
 }
 
