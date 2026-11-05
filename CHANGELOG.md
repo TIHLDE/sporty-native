@@ -37,6 +37,7 @@ Kopier denne blokken til toppen av listen under, og ta bare med kategoriene som 
 
 ### ♻️ Endret
 
+- Expo-pakkene er oppdatert til versjonene SDK 57 forventer
 - **Flytende skrivefelt i chatten**: skrivefeltet er en kapsel som flyter over meldingene, og send-knappen vises først når du har skrevet noe
 - **Nye faner på gruppesiden**: fanene ser ut som på nettsiden, med tekst og en strek som glir til den aktive fanen, og innholdet tones inn fra siden du bytter mot. Fanen du velger, scrolles automatisk inn i raden
 - **Samme faner på arrangementssiden**: Kommer, Ikke svart og Nei har samme utseende og animasjon som på gruppesiden, og fester seg under headeren når du scroller
