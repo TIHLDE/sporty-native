@@ -195,6 +195,8 @@ function Chat({ conversation, me }: { conversation: ConversationDetails; me: Use
           keyExtractor={(m) => m.id}
           className="flex-1"
           contentContainerClassName="px-3 py-3"
+          // Listen er snudd, så hodet er nederst på skjermen, under den nyeste meldingen.
+          ListHeaderComponent={<View style={{ height: layout.restingPadding }} />}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           onScrollBeginDrag={() => layout.open && layout.closePanel()}
@@ -202,6 +204,7 @@ function Chat({ conversation, me }: { conversation: ConversationDetails; me: Use
             <KeyboardChatScrollView
               {...props}
               inverted
+              offset={layout.keyboardOffset}
               extraContentPadding={layout.extraContentPadding}
             />
           )}
@@ -354,7 +357,7 @@ function messageActions(
       : [
           { label: 'Rapporter', icon: Flag, onPress: handlers.report },
           {
-            label: `Blokker ${message.sender.name}`,
+            label: `Blokker ${message.sender.name.split(' ')[0]}`,
             icon: Ban,
             onPress: handlers.block,
             destructive: true,
