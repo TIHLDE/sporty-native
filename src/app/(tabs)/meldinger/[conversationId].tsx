@@ -375,30 +375,31 @@ function Bubble({
 }) {
   const pending = message.id.startsWith('temp-');
   const { gif } = message;
+  // GIF-er har ingen boble, så tekst rundt dem står rett på bakgrunnen.
+  const onBrand = isMine && !gif;
 
   return (
     <View
       className={cn(
-        'rounded-2xl',
-        gif ? 'p-1' : 'px-3 py-2',
-        message.deleted ? 'border-border border' : isMine ? 'bg-brand' : 'bg-muted',
+        !gif && 'rounded-2xl px-3 py-2',
+        message.deleted ? 'border-border border' : !gif && (isMine ? 'bg-brand' : 'bg-muted'),
         pending && 'opacity-60'
       )}>
       {message.replyTo && !message.deleted && (
         <View
           className={cn(
             'mb-1.5 rounded-lg border-l-2 px-2 py-1',
-            isMine ? 'border-white/70 bg-white/15' : 'border-brand bg-background/60'
+            onBrand ? 'border-white/70 bg-white/15' : 'border-brand bg-muted'
           )}>
           <Text
-            className={cn('text-xs font-semibold', isMine ? 'text-white' : 'text-brand')}
+            className={cn('text-xs font-semibold', onBrand ? 'text-white' : 'text-brand')}
             numberOfLines={1}>
             {message.replyTo.senderName}
           </Text>
           <Text
             className={cn(
               'text-[13px] leading-4',
-              isMine ? 'text-white/80' : 'text-muted-foreground',
+              onBrand ? 'text-white/80' : 'text-muted-foreground',
               message.replyTo.deleted && 'italic'
             )}
             numberOfLines={2}>
@@ -427,11 +428,11 @@ function Bubble({
       ) : (
         <Text className={cn('text-[15px] leading-5', isMine && 'text-white')}>{message.body}</Text>
       )}
-      <View className={cn('flex-row items-center gap-1 self-end', gif && 'px-1.5 py-0.5')}>
+      <View className={cn('flex-row items-center gap-1 self-end', gif && 'px-0.5 pt-1')}>
         <Text
           className={cn(
             'text-[10px]',
-            isMine && !message.deleted ? 'text-white/70' : 'text-muted-foreground'
+            onBrand && !message.deleted ? 'text-white/70' : 'text-muted-foreground'
           )}>
           {pending
             ? 'Sender …'
@@ -442,7 +443,7 @@ function Bubble({
           <Icon
             as={status === 'read' ? CheckCheck : Check}
             size={14}
-            className={message.deleted ? 'text-muted-foreground' : 'text-white/70'}
+            className={message.deleted || gif ? 'text-muted-foreground' : 'text-white/70'}
             accessibilityLabel={status === 'read' ? 'Lest' : 'Levert'}
           />
         )}
