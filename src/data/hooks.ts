@@ -40,6 +40,7 @@ import type {
   MatchStatType,
   Me,
   Message,
+  MessageGif,
   MessagePage,
   Notification,
   NotificationSettings,
@@ -580,12 +581,20 @@ export function useSendMessage(conversationId: string, me: User) {
   const key = ['messages', conversationId];
 
   return useMutation({
-    mutationFn: ({ body, replyTo }: { body: string; replyTo: Message | null }) =>
+    mutationFn: ({
+      body,
+      replyTo,
+      gif = null,
+    }: {
+      body: string;
+      replyTo: Message | null;
+      gif?: MessageGif | null;
+    }) =>
       api<Message>(`/conversations/${conversationId}/messages`, {
         method: 'POST',
-        body: { body, replyToId: replyTo?.id ?? null },
+        body: { body, replyToId: replyTo?.id ?? null, gif },
       }),
-    onMutate: async ({ body, replyTo }) => {
+    onMutate: async ({ body, replyTo, gif = null }) => {
       await queryClient.cancelQueries({ queryKey: key });
       const tempId = `temp-${Date.now()}`;
       queryClient.setQueryData<InfiniteData<MessagePage>>(key, (data) => {
@@ -599,6 +608,7 @@ export function useSendMessage(conversationId: string, me: User) {
           deleted: false,
           edited: false,
           reactions: [],
+          gif,
           replyTo: replyTo && {
             id: replyTo.id,
             senderName: replyTo.sender.name,
@@ -733,7 +743,7 @@ export function useDeleteMessage(conversationId: string) {
   const key = ['messages', conversationId];
   const markDeleted = (m: Message, id: string): Message => ({
     ...m,
-    ...(m.id === id && { body: '', deleted: true }),
+    ...(m.id === id && { body: '', deleted: true, gif: null }),
     ...(m.replyTo?.id === id && { replyTo: { ...m.replyTo, body: '', deleted: true } }),
   });
 

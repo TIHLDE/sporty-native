@@ -2,17 +2,15 @@ import { router } from "expo-router";
 import { ChevronRight, Lock, Sparkles } from "lucide-react-native";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
-import Animated from "react-native-reanimated";
 
 import { EmptyState } from "@/components/sporty/empty-state";
 import { QueryState } from "@/components/sporty/query-state";
 import { UserAvatar } from "@/components/sporty/user-row";
 import { Icon } from "@/components/ui/icon";
+import { Segmented } from "@/components/ui/segmented";
 import {
-  TabLabel,
   TabPanel,
   getTabDirection,
-  useTabIndicator,
   type TabDirection,
 } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
@@ -667,46 +665,5 @@ function Pill({
         {label}
       </Text>
     </Pressable>
-  );
-}
-
-function Segmented<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: T; label: string }[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  const [layouts, setLayouts] = useState<
-    Record<string, { x: number; width: number }>
-  >({});
-  const pillStyle = useTabIndicator(layouts[value]);
-
-  if (options.length < 2) return null;
-  return (
-    <View className="bg-muted/60 flex-row gap-1 rounded-full p-1">
-      <Animated.View
-        pointerEvents="none"
-        className="bg-muted absolute bottom-1 left-0 top-1 rounded-full"
-        style={pillStyle}
-      />
-      {options.map((o) => (
-        <Pressable
-          key={o.value}
-          onPress={() => onChange(o.value)}
-          onLayout={(event) => {
-            const { x, width } = event.nativeEvent.layout;
-            setLayouts((current) => ({ ...current, [o.value]: { x, width } }));
-          }}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: o.value === value }}
-          className="h-9 flex-1 items-center justify-center rounded-full"
-        >
-          <TabLabel active={o.value === value}>{o.label}</TabLabel>
-        </Pressable>
-      ))}
-    </View>
   );
 }

@@ -30,8 +30,14 @@ Kopier denne blokken til toppen av listen under, og ta bare med kategoriene som 
 
 ## 2026-11-05
 
+### ✨ Feature
+
+- **GIF-er i meldinger**: send GIF-er fra Klipy, og lagre favoritter med stjernen eller ved å holde inne en GIF, også i chatten
+- **Emoji- og GIF-panel**: emoji-knappen åpner et panel med Emoji, GIF og Favoritter der tastaturet ellers er. Dra i streken for full høyde
+
 ### ♻️ Endret
 
+- **Flytende skrivefelt i chatten**: skrivefeltet er en kapsel som flyter over meldingene, og send-knappen vises først når du har skrevet noe
 - **Nye faner på gruppesiden**: fanene ser ut som på nettsiden, med tekst og en strek som glir til den aktive fanen, og innholdet tones inn fra siden du bytter mot. Fanen du velger, scrolles automatisk inn i raden
 - **Samme faner på arrangementssiden**: Kommer, Ikke svart og Nei har samme utseende og animasjon som på gruppesiden, og fester seg under headeren når du scroller
 - **Animert bytte i Statistikk**: pillen glir mellom Meg, Laget og Admin, og innholdet tones inn fra siden du bytter mot
