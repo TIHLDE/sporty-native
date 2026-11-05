@@ -71,6 +71,7 @@ export function useComposerLayout(bottomInset: number) {
   const { height: windowHeight } = useWindowDimensions();
   const panelHeight = useSharedValue(0);
   const dockHeight = useSharedValue(DOCK_HEIGHT);
+  const [dockSize, setDockSize] = useState(DOCK_HEIGHT);
   const searching = useSharedValue(false);
   const [open, setOpen] = useState(false);
   const [tall, setTall] = useState(false);
@@ -140,7 +141,8 @@ export function useComposerLayout(bottomInset: number) {
 
   // Plassen under meldingene når ingenting er åpent. Den må ligge i selve listen: et innrykk flytter
   // ikke listen ved åpning, så den nyeste meldingen ville havnet bak kapselen.
-  const restingPadding = DOCK_HEIGHT + base;
+  // Følger høyden på kapselen, så flere linjer eller svar-stripen ikke dekker meldingene.
+  const restingPadding = dockSize + base;
   // KeyboardChatScrollView løfter listen med tastaturhøyden minus denne.
   const keyboardOffset = Math.max(base - GAP, 0);
 
@@ -149,6 +151,14 @@ export function useComposerLayout(bottomInset: number) {
     const fromKeyboard = Math.max(Math.abs(keyboard.get()) - keyboardOffset, 0);
     return Math.max(dockHeight.get() + lift.get() - restingPadding - fromKeyboard, 0);
   });
+
+  const onDockLayout = useCallback(
+    (height: number) => {
+      dockHeight.set(height);
+      setDockSize(height);
+    },
+    [dockHeight]
+  );
 
   const dockStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -lift.get() }] }));
   const panelStyle = useAnimatedStyle(() => ({
@@ -163,7 +173,7 @@ export function useComposerLayout(bottomInset: number) {
     closePanel,
     setPanelTall,
     onSearchFocusChange,
-    dockHeight,
+    onDockLayout,
     dockStyle,
     panelStyle,
     restingPadding,
@@ -279,7 +289,7 @@ export function ChatComposer({
 
       <Animated.View
         style={layout.dockStyle}
-        onLayout={(event) => layout.dockHeight.set(event.nativeEvent.layout.height)}
+        onLayout={(event) => layout.onDockLayout(event.nativeEvent.layout.height)}
         className="absolute inset-x-3 bottom-0 gap-1.5">
         {target && (
           <Surface>
