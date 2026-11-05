@@ -13,11 +13,13 @@ import { Alert, Pressable, View, useColorScheme, useWindowDimensions } from 'rea
 import Animated, {
   Extrapolation,
   interpolate,
+  useAnimatedReaction,
   useAnimatedRef,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { AnnouncementCard } from '@/components/sporty/announcement-card';
 import { EmptyState } from '@/components/sporty/empty-state';
@@ -67,6 +69,7 @@ const TABS = [
 
 /** Hvor langt før fanene fester seg bakgrunnen bak headeren begynner å tones inn. */
 const HEADER_FADE_DISTANCE = 40;
+const BANNER_FOREGROUND = '#ffffff';
 
 export default function GroupScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -81,8 +84,10 @@ function GroupView({ group }: { group: GroupDetails }) {
   // Bøter gjelder hele gruppen og hører til hovedgruppen, så undergrupper har ikke Bøter-fanen.
   const tabs = group.parentId ? TABS.filter((t) => t.value !== 'boter') : TABS;
   const manage = group.canManage;
-  // Samme farge som tilbakeknappen: svart i lys modus, hvit i mørk.
-  const headerColor = THEME[useColorScheme() === 'dark' ? 'dark' : 'light'].foreground;
+  // Hvit over banneret, som knappene der. Når fanene er festet, ligger headeren på bakgrunnen.
+  const [overBanner, setOverBanner] = useState(true);
+  const foreground = THEME[useColorScheme() === 'dark' ? 'dark' : 'light'].foreground;
+  const headerColor = overBanner ? BANNER_FOREGROUND : foreground;
 
   const headerHeight = useHeaderHeight();
   const { height: windowHeight } = useWindowDimensions();
@@ -95,6 +100,15 @@ function GroupView({ group }: { group: GroupDetails }) {
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);
   });
+
+  // Byttes midt i toningen av bakgrunnen bak headeren, så teksten alltid er lesbar.
+  useAnimatedReaction(
+    () => scrollY.get() < bannerHeight.get() - headerHeight - HEADER_FADE_DISTANCE / 2,
+    (isOverBanner, previous) => {
+      if (isOverBanner !== previous) scheduleOnRN(setOverBanner, isOverBanner);
+    },
+    [headerHeight]
+  );
 
   // Headeren er gjennomsiktig, så fanene må stoppe under den, ikke øverst på skjermen.
   const stickyStyle = useAnimatedStyle(() => ({

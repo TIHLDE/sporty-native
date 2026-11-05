@@ -53,6 +53,7 @@ Kopier denne blokken til toppen av listen under, og ta bare med kategoriene som 
 ### 🐛 Fix
 
 - Fanene på gruppesiden fester seg nå under headeren i stedet for bak statuslinjen og tilbakeknappen
+- Tittelen og knappene øverst på gruppesiden var svarte mot banneret i lys modus. De er nå hvite over banneret og bytter farge når fanene fester seg
 - Logoen i oppstartsanimasjonen ble kuttet øverst og nederst. Den vises nå i full høyde, samme størrelse som splash-skjermen
 
 ## 2026-10-14 (backend flyttet til Sporty v3)
