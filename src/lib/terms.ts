@@ -3,6 +3,9 @@
 // UTKAST: teksten må godkjennes av de ansvarlige i TIHLDE før lansering. Når innholdet endres, må
 // TERMS_VERSION økes på serveren, så må alle godta på nytt.
 
+/** Personvernerklæringen ligger hos TIHLDE. */
+export const PRIVACY_URL = 'https://tihlde.org/personvern';
+
 export const TERMS_SECTIONS = [
   {
     title: 'Hva Sporty er',

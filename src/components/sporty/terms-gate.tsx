@@ -1,4 +1,5 @@
-import { Alert, ScrollView, View } from 'react-native';
+import { openBrowserAsync } from 'expo-web-browser';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Text } from '@/components/ui/text';
 import { useMe } from '@/data/hooks';
 import { useAcceptTerms } from '@/data/moderation';
 import { useSession } from '@/data/session';
-import { TERMS_SECTIONS } from '@/lib/terms';
+import { PRIVACY_URL, TERMS_SECTIONS } from '@/lib/terms';
 
 /** Selve vilkårsteksten. */
 export function TermsText() {
@@ -18,6 +19,12 @@ export function TermsText() {
           <Text className="text-muted-foreground text-sm leading-5">{section.body}</Text>
         </View>
       ))}
+      <Pressable
+        onPress={() => openBrowserAsync(PRIVACY_URL)}
+        accessibilityRole="link"
+        className="active:opacity-70">
+        <Text className="text-brand text-sm font-medium">Les personvernerklæringen</Text>
+      </Pressable>
     </View>
   );
 }
