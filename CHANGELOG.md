@@ -33,6 +33,8 @@ Kopier denne blokken til toppen av listen under, og ta bare med kategoriene som 
 ### ✨ Feature
 
 - **Rapportering og blokkering**: hold inne en melding for å rapportere den eller blokkere avsenderen. Sub-/admin behandler rapporter under Profil, og blokkerte personer finnes samme sted
+- **Rapportering av kommentarer**: hold inne en kommentar for å rapportere den eller blokkere den som skrev den
+- **Brukervilkår**: alle må godta vilkårene for å bruke appen, og de kan leses under Profil
 - **GIF-er i meldinger**: send GIF-er fra Klipy, og lagre favoritter med stjernen eller ved å holde inne en GIF, også i chatten
 - **Emoji- og GIF-panel**: emoji-knappen åpner et panel med Emoji, GIF og Favoritter der tastaturet ellers er. Dra i streken for full høyde
 

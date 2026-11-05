@@ -9,6 +9,7 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 
 import { APP_ENTRANCE_SCALE, AnimatedSplashOverlay } from '@/components/animated-icon';
 import { NotificationsManager } from '@/components/notifications-manager';
+import { TermsGate } from '@/components/sporty/terms-gate';
 import { loadAppearancePreference } from '@/data/appearance';
 import { loadCalendarSettings } from '@/data/calendar-settings';
 import { SessionProvider, useSession } from '@/data/session';
@@ -46,6 +47,7 @@ function RootNavigator() {
       {/* Splash-skjermen står til vi vet om brukeren er logget inn, så innloggingen ikke blinker. */}
       {status !== 'loading' && <AnimatedSplashOverlay appScale={appScale} />}
       {signedIn && <NotificationsManager />}
+      {signedIn && <TermsGate />}
       <Animated.View style={[{ flex: 1 }, appStyle]}>
         <Stack>
           <Stack.Protected guard={!signedIn}>
@@ -135,6 +137,10 @@ function RootNavigator() {
               options={{ title: 'Ny kunngjøring', presentation: 'modal' }}
             />
             <Stack.Screen name="ny-hendelse" options={{ title: 'Ny hendelse', presentation: 'modal' }} />
+            <Stack.Screen
+              name="vilkar"
+              options={{ title: 'Brukervilkår', headerBackButtonDisplayMode: 'minimal' }}
+            />
             <Stack.Screen
               name="rapporter"
               options={{ title: 'Rapporter', headerBackButtonDisplayMode: 'minimal' }}

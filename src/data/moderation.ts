@@ -25,6 +25,25 @@ export const useReportMessage = (conversationId: string) =>
       }),
   });
 
+export const useReportComment = () =>
+  useMutation({
+    mutationFn: (input: {
+      type: 'announcement' | 'poll';
+      commentId: string;
+      reason: ReportReason;
+    }) => api('/reports', { method: 'POST', body: input }),
+  });
+
+/** Brukeren godtar gjeldende vilkår. Når /me er hentet på nytt, forsvinner vilkårsskjermen. */
+export function useAcceptTerms() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => api('/me/terms', { method: 'POST' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['me'] }),
+  });
+}
+
 export function useResolveReport() {
   const queryClient = useQueryClient();
 
@@ -48,6 +67,9 @@ function useInvalidateAfterBlock() {
     queryClient.invalidateQueries({ queryKey: ['messages'] });
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
     queryClient.invalidateQueries({ queryKey: ['unread'] });
+    // Kommentarene hentes sammen med kunngjøringen eller avstemningen.
+    queryClient.invalidateQueries({ queryKey: ['announcements'] });
+    queryClient.invalidateQueries({ queryKey: ['polls'] });
   };
 }
 

@@ -6,14 +6,70 @@ import { Alert, Pressable, View } from 'react-native';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import type { Comment } from '@/data/types';
+import { useBlockUser, useReportComment } from '@/data/moderation';
+import { useSession } from '@/data/session';
+import type { Comment, ReportReason, User } from '@/data/types';
 import { formatRelative } from '@/lib/dates';
+import { REPORT_REASONS } from '@/lib/messages';
 
 import { BottomBar } from './bottom-bar';
 import { UserAvatar } from './user-row';
 
-/** Kommentarlisten under en kunngjøring eller avstemning. */
-export function CommentSection({ comments, allowed }: { comments: Comment[]; allowed: boolean }) {
+/** Kommentarlisten under en kunngjøring eller avstemning. Hold inne en kommentar for valg. */
+export function CommentSection({
+  comments,
+  allowed,
+  type,
+}: {
+  comments: Comment[];
+  allowed: boolean;
+  type: 'announcement' | 'poll';
+}) {
+  const { userId } = useSession();
+  const { mutate: reportComment } = useReportComment();
+  const { mutate: blockUser } = useBlockUser();
+
+  const report = (comment: Comment) => {
+    const send = (reason: ReportReason) =>
+      reportComment(
+        { type, commentId: comment.id, reason },
+        {
+          onSuccess: () => Alert.alert('Takk', 'Kommentaren er rapportert.'),
+          onError: (error) => Alert.alert('Rapporten ble ikke sendt', error.message),
+        }
+      );
+    Alert.alert('Hvorfor rapporterer du kommentaren?', undefined, [
+      ...REPORT_REASONS.map((r) => ({ text: r.label, onPress: () => send(r.value) })),
+      { text: 'Avbryt', style: 'cancel' },
+    ]);
+  };
+
+  const block = (user: User) =>
+    Alert.alert(
+      `Blokkere ${user.name}?`,
+      'Du ser ikke lenger meldingene og kommentarene deres, og dere kan ikke sende direktemeldinger til hverandre.',
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Blokker',
+          style: 'destructive',
+          onPress: () =>
+            blockUser(user.id, {
+              onError: (error) => Alert.alert('Personen ble ikke blokkert', error.message),
+            }),
+        },
+      ]
+    );
+
+  const openMenu = (comment: Comment) => {
+    if (comment.author.id === userId) return;
+    Alert.alert(comment.author.name, undefined, [
+      { text: 'Rapporter', onPress: () => report(comment) },
+      { text: 'Blokker', style: 'destructive', onPress: () => block(comment.author) },
+      { text: 'Avbryt', style: 'cancel' },
+    ]);
+  };
+
   return (
     <View className="gap-3">
       <Text variant="h4">Kommentarer</Text>
@@ -26,7 +82,11 @@ export function CommentSection({ comments, allowed }: { comments: Comment[]; all
         <Text className="text-muted-foreground text-sm">Ingen kommentarer ennå</Text>
       ) : (
         comments.map((comment) => (
-          <View key={comment.id} className="flex-row gap-3">
+          <Pressable
+            key={comment.id}
+            onLongPress={() => openMenu(comment)}
+            accessibilityHint="Hold inne for å rapportere eller blokkere"
+            className="flex-row gap-3">
             <UserAvatar user={comment.author} className="size-8" />
             <View className="bg-muted/60 flex-1 gap-0.5 rounded-2xl px-3 py-2">
               <Text className="text-sm font-semibold">
@@ -37,7 +97,7 @@ export function CommentSection({ comments, allowed }: { comments: Comment[]; all
               </Text>
               <Text className="text-sm leading-5">{comment.body}</Text>
             </View>
-          </View>
+          </Pressable>
         ))
       )}
     </View>

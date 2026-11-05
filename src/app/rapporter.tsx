@@ -18,7 +18,7 @@ export default function RapporterScreen() {
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerClassName="gap-3 p-4 pb-16">
       <Text className="text-muted-foreground text-sm">
-        Meldinger som er rapportert i gruppene dine. Behandle dem innen 24 timer.
+        Meldinger og kommentarer som er rapportert i gruppene dine. Behandle dem innen 24 timer.
       </Text>
       <QueryState query={reports}>
         {(data) =>
@@ -72,7 +72,7 @@ function ReportCard({ report }: { report: MessageReport }) {
           className="flex-1 rounded-full"
           disabled={resolve.isPending}
           onPress={() => act('remove')}>
-          <Text>Slett meldingen</Text>
+          <Text>{report.kind === 'comment' ? 'Slett kommentaren' : 'Slett meldingen'}</Text>
         </Button>
         <Button
           variant="outline"

@@ -52,7 +52,7 @@ function AnnouncementView({ announcement }: { announcement: AnnouncementDetails 
           </View>
         )}
 
-        <CommentSection comments={announcement.comments} allowed={announcement.allowComments} />
+        <CommentSection type="announcement" comments={announcement.comments} allowed={announcement.allowComments} />
       </FormScrollView>
 
       {announcement.allowComments && <CommentInput mutation={addComment} />}

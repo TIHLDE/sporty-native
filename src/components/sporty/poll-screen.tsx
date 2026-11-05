@@ -33,7 +33,7 @@ function PollView({ poll }: { poll: PollDetails }) {
           {formatRelative(poll.createdAt)}
         </Text>
         <PollCard poll={poll} />
-        <CommentSection comments={poll.comments} allowed={poll.allowComments} />
+        <CommentSection type="poll" comments={poll.comments} allowed={poll.allowComments} />
       </FormScrollView>
       {poll.allowComments && <CommentInput mutation={addComment} />}
     </View>

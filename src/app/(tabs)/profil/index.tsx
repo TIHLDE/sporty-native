@@ -1,5 +1,14 @@
 import { Link } from 'expo-router';
-import { Ban, BellRing, ChevronRight, Flag, Moon, Settings, UserCog } from 'lucide-react-native';
+import {
+  Ban,
+  BellRing,
+  ChevronRight,
+  FileText,
+  Flag,
+  Moon,
+  Settings,
+  UserCog,
+} from 'lucide-react-native';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { GroupAvatar } from '@/components/sporty/group-avatar';
@@ -115,6 +124,14 @@ export default function ProfilScreen() {
           </Pressable>
         </Link>
         <ReportsRow />
+        <Separator />
+        <Link href="/vilkar" asChild>
+          <Pressable className="flex-row items-center gap-3 py-3 active:opacity-70">
+            <Icon as={FileText} size={18} />
+            <Text className="flex-1">Brukervilkår</Text>
+            <Icon as={ChevronRight} size={18} className="text-muted-foreground" />
+          </Pressable>
+        </Link>
       </Section>
     </ScrollView>
   );
