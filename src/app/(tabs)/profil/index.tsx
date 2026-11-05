@@ -1,5 +1,5 @@
 import { Link } from 'expo-router';
-import { BellRing, ChevronRight, Moon, Settings, UserCog } from 'lucide-react-native';
+import { Ban, BellRing, ChevronRight, Flag, Moon, Settings, UserCog } from 'lucide-react-native';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { GroupAvatar } from '@/components/sporty/group-avatar';
@@ -12,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { APPEARANCE_OPTIONS, useAppearancePreference } from '@/data/appearance';
 import { useMe, useMyFines, useMyGroups } from '@/data/hooks';
 import type { Role } from '@/data/types';
+import { useReports } from '@/data/moderation';
 import { formatDateLong } from '@/lib/dates';
 import { formatFineCount, isUnpaid } from '@/lib/fines';
 
@@ -105,8 +106,36 @@ export default function ProfilScreen() {
         </Link>
         <Separator />
         <AppearanceRow />
+        <Separator />
+        <Link href="/blokkerte" asChild>
+          <Pressable className="flex-row items-center gap-3 py-3 active:opacity-70">
+            <Icon as={Ban} size={18} />
+            <Text className="flex-1">Blokkerte personer</Text>
+            <Icon as={ChevronRight} size={18} className="text-muted-foreground" />
+          </Pressable>
+        </Link>
+        <ReportsRow />
       </Section>
     </ScrollView>
+  );
+}
+
+/** Lenke til rapportene for dem som har noen å behandle. */
+function ReportsRow() {
+  const count = useReports().data?.length ?? 0;
+  if (count === 0) return null;
+
+  return (
+    <>
+      <Separator />
+      <Link href="/rapporter" asChild>
+        <Pressable className="flex-row items-center gap-3 py-3 active:opacity-70">
+          <Icon as={Flag} size={18} />
+          <Text className="flex-1">{count === 1 ? '1 åpen rapport' : `${count} åpne rapporter`}</Text>
+          <Icon as={ChevronRight} size={18} className="text-muted-foreground" />
+        </Pressable>
+      </Link>
+    </>
   );
 }
 

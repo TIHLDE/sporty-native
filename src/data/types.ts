@@ -361,7 +361,8 @@ export interface GroupFile {
 }
 
 export type NotificationType =
-  'event' | 'attendance' | 'fine' | 'announcement' | 'poll' | 'payment';
+  'event' | 'attendance' | 'fine' | 'announcement' | 'poll' | 'payment'
+  | 'report';
 
 export interface Notification {
   id: string;
@@ -399,6 +400,22 @@ export interface Message {
   reactions: MessageReaction[];
   /** GIF-en meldingen består av. Da er `body` bare «GIF», så forhåndsvisninger gir mening. */
   gif: MessageGif | null;
+}
+
+export type ReportReason = 'harassment' | 'inappropriate' | 'spam' | 'other';
+
+/** En åpen rapport om en melding, slik sub-/admin eller Index ser den. */
+export interface MessageReport {
+  id: string;
+  reason: ReportReason;
+  /** Meldingen slik den var da den ble rapportert. */
+  body: string;
+  gifUrl: string | null;
+  createdAt: string;
+  reporter: User;
+  sender: User;
+  /** Null for direktemeldinger. */
+  groupName: string | null;
 }
 
 export interface MessageGif {
