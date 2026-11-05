@@ -2,11 +2,19 @@ import { router } from "expo-router";
 import { ChevronRight, Lock, Sparkles } from "lucide-react-native";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, View } from "react-native";
+import Animated from "react-native-reanimated";
 
 import { EmptyState } from "@/components/sporty/empty-state";
 import { QueryState } from "@/components/sporty/query-state";
 import { UserAvatar } from "@/components/sporty/user-row";
 import { Icon } from "@/components/ui/icon";
+import {
+  TabLabel,
+  TabPanel,
+  getTabDirection,
+  useTabIndicator,
+  type TabDirection,
+} from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
 import { useGroupStats } from "@/data/hooks";
 import type {
@@ -71,6 +79,7 @@ const duration = (hours: number | null) =>
 export function StatsTab({ group }: { group: GroupDetails }) {
   const [period, setPeriod] = useState<string | null>(null);
   const [view, setView] = useState<StatsView | null>(null);
+  const [direction, setDirection] = useState<TabDirection>(0);
   const stats = useGroupStats(group.id, period);
 
   return (
@@ -91,7 +100,20 @@ export function StatsTab({ group }: { group: GroupDetails }) {
             <View
               className={cn("gap-4", stats.isPlaceholderData && "opacity-60")}
             >
-              <Segmented options={views} value={shown} onChange={setView} />
+              <Segmented
+                options={views}
+                value={shown}
+                onChange={(next) => {
+                  setDirection(
+                    getTabDirection(
+                      views.map((v) => v.value),
+                      shown,
+                      next,
+                    ),
+                  );
+                  setView(next);
+                }}
+              />
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View className="flex-row gap-2">
                   {data.periods.map((p) => (
@@ -104,36 +126,38 @@ export function StatsTab({ group }: { group: GroupDetails }) {
                   ))}
                 </View>
               </ScrollView>
-              {data.team.events.total === 0 ? (
-                <EmptyState
-                  text={`Ingen arrangementer som har vært i ${data.period.label}`}
-                />
-              ) : shown === "meg" && data.me ? (
-                <MeView stats={data} me={data.me} groupId={group.id} />
-              ) : shown === "admin" && data.admin ? (
-                <AdminView admin={data.admin} />
-              ) : (
-                <TeamView
-                  team={data.team}
-                  period={data.period.label}
-                  onOpenMatches={() =>
-                    router.push({
-                      pathname: "/grupper/[groupId]/kamper",
-                      params: { groupId: group.id, period: data.period.id },
-                    })
-                  }
-                  onOpenList={(list) =>
-                    router.push({
-                      pathname: "/statistikk-liste",
-                      params: {
-                        groupId: group.id,
-                        period: data.period.id,
-                        list,
-                      },
-                    })
-                  }
-                />
-              )}
+              <TabPanel key={shown} direction={direction}>
+                {data.team.events.total === 0 ? (
+                  <EmptyState
+                    text={`Ingen arrangementer som har vært i ${data.period.label}`}
+                  />
+                ) : shown === "meg" && data.me ? (
+                  <MeView stats={data} me={data.me} groupId={group.id} />
+                ) : shown === "admin" && data.admin ? (
+                  <AdminView admin={data.admin} />
+                ) : (
+                  <TeamView
+                    team={data.team}
+                    period={data.period.label}
+                    onOpenMatches={() =>
+                      router.push({
+                        pathname: "/grupper/[groupId]/kamper",
+                        params: { groupId: group.id, period: data.period.id },
+                      })
+                    }
+                    onOpenList={(list) =>
+                      router.push({
+                        pathname: "/statistikk-liste",
+                        params: {
+                          groupId: group.id,
+                          period: data.period.id,
+                          list,
+                        },
+                      })
+                    }
+                  />
+                )}
+              </TabPanel>
             </View>
           );
         }}
@@ -655,30 +679,32 @@ function Segmented<T extends string>({
   value: T;
   onChange: (value: T) => void;
 }) {
+  const [layouts, setLayouts] = useState<
+    Record<string, { x: number; width: number }>
+  >({});
+  const pillStyle = useTabIndicator(layouts[value]);
+
   if (options.length < 2) return null;
   return (
     <View className="bg-muted/60 flex-row gap-1 rounded-full p-1">
+      <Animated.View
+        pointerEvents="none"
+        className="bg-muted absolute bottom-1 left-0 top-1 rounded-full"
+        style={pillStyle}
+      />
       {options.map((o) => (
         <Pressable
           key={o.value}
           onPress={() => onChange(o.value)}
+          onLayout={(event) => {
+            const { x, width } = event.nativeEvent.layout;
+            setLayouts((current) => ({ ...current, [o.value]: { x, width } }));
+          }}
           accessibilityRole="tab"
           accessibilityState={{ selected: o.value === value }}
-          className={cn(
-            "h-9 flex-1 items-center justify-center rounded-full",
-            o.value === value && "bg-muted",
-          )}
+          className="h-9 flex-1 items-center justify-center rounded-full"
         >
-          <Text
-            className={cn(
-              "text-sm",
-              o.value === value
-                ? "font-semibold"
-                : "text-muted-foreground font-medium",
-            )}
-          >
-            {o.label}
-          </Text>
+          <TabLabel active={o.value === value}>{o.label}</TabLabel>
         </Pressable>
       ))}
     </View>

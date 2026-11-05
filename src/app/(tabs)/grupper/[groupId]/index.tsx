@@ -1,4 +1,5 @@
 import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import {
   CircleDollarSign,
   FaceAngry,
@@ -8,7 +9,15 @@ import {
   Plus,
 } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, View, useColorScheme } from 'react-native';
+import { Alert, Pressable, View, useColorScheme, useWindowDimensions } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 
 import { AnnouncementCard } from '@/components/sporty/announcement-card';
 import { EmptyState } from '@/components/sporty/empty-state';
@@ -22,7 +31,15 @@ import { StatsTab } from '@/components/sporty/stats-tab';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  TabPanel,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  getTabDirection,
+  type TabDirection,
+} from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
 import {
   useAnnouncements,
@@ -37,7 +54,6 @@ import type { GroupDetails } from '@/data/types';
 import { formatRelative } from '@/lib/dates';
 import { formatFineCount } from '@/lib/fines';
 import { THEME } from '@/lib/theme';
-import { cn } from '@/lib/utils';
 
 const TABS = [
   { value: 'arrangementer', label: 'Arrangementer' },
@@ -49,6 +65,9 @@ const TABS = [
   { value: 'statistikk', label: 'Statistikk' },
 ];
 
+/** Hvor langt før fanene fester seg bakgrunnen bak headeren begynner å tones inn. */
+const HEADER_FADE_DISTANCE = 40;
+
 export default function GroupScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const group = useGroup(groupId);
@@ -58,11 +77,58 @@ export default function GroupScreen() {
 
 function GroupView({ group }: { group: GroupDetails }) {
   const [tab, setTab] = useState(TABS[0].value);
+  const [direction, setDirection] = useState<TabDirection>(0);
   // Bøter gjelder hele gruppen og hører til hovedgruppen, så undergrupper har ikke Bøter-fanen.
   const tabs = group.parentId ? TABS.filter((t) => t.value !== 'boter') : TABS;
   const manage = group.canManage;
   // Samme farge som tilbakeknappen: svart i lys modus, hvit i mørk.
   const headerColor = THEME[useColorScheme() === 'dark' ? 'dark' : 'light'].foreground;
+
+  const headerHeight = useHeaderHeight();
+  const { height: windowHeight } = useWindowDimensions();
+  const [tabBarHeight, setTabBarHeight] = useState(0);
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useSharedValue(0);
+  // Stor startverdi: fanene skal ikke flyttes før banneret faktisk er målt.
+  const bannerHeight = useSharedValue(Number.MAX_SAFE_INTEGER);
+
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.set(event.contentOffset.y);
+  });
+
+  // Headeren er gjennomsiktig, så fanene må stoppe under den, ikke øverst på skjermen.
+  const stickyStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: Math.max(0, scrollY.get() - (bannerHeight.get() - headerHeight)) }],
+  }));
+
+  const headerBackdropStyle = useAnimatedStyle(() => {
+    const stickAt = bannerHeight.get() - headerHeight;
+    return {
+      opacity: interpolate(
+        scrollY.get(),
+        [stickAt - HEADER_FADE_DISTANCE, stickAt],
+        [0, 1],
+        Extrapolation.CLAMP
+      ),
+    };
+  });
+
+  function changeTab(next: string) {
+    setDirection(
+      getTabDirection(
+        tabs.map((t) => t.value),
+        tab,
+        next
+      )
+    );
+    setTab(next);
+
+    // Står fanene festet, starter den nye fanen fra toppen i stedet for midt i innholdet.
+    const stickAt = bannerHeight.get() - headerHeight;
+    if (scrollY.get() > stickAt) {
+      scrollRef.current?.scrollTo({ y: stickAt, animated: false });
+    }
+  }
 
   return (
     <>
@@ -84,60 +150,75 @@ function GroupView({ group }: { group: GroupDetails }) {
             : undefined,
         }}
       />
-      <Tabs value={tab} onValueChange={setTab} className="flex-1 gap-0">
-        <ScrollView
-          stickyHeaderIndices={[1]}
+      <Tabs value={tab} onValueChange={changeTab} className="flex-1 gap-0">
+        <Animated.ScrollView
+          ref={scrollRef}
+          onScroll={onScroll}
           contentInsetAdjustmentBehavior="never"
-          contentContainerClassName="pb-32">
-          <GroupBanner group={group} />
-
-          <View className="bg-background border-border border-b py-3">
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerClassName="px-4">
-              <TabsList className="h-auto gap-1 bg-transparent p-0">
-                {tabs.map(({ value, label }) => (
-                  <TabsTrigger
-                    key={value}
-                    value={value}
-                    className={cn(
-                      'h-9 rounded-full border-0 px-4',
-                      tab === value && 'bg-muted dark:bg-muted'
-                    )}>
-                    <Text>{label}</Text>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </ScrollView>
+          contentContainerStyle={{ paddingBottom: 128 }}>
+          <View onLayout={(event) => bannerHeight.set(event.nativeEvent.layout.height)}>
+            <GroupBanner group={group} />
           </View>
 
-          <View className="p-4">
+          <Animated.View
+            style={[{ zIndex: 10 }, stickyStyle]}
+            onLayout={(event) => setTabBarHeight(event.nativeEvent.layout.height)}>
+            {/* Dekker headeren når fanene er festet, så innhold ikke synes bak tilbakeknappen. */}
+            <Animated.View
+              pointerEvents="none"
+              className="bg-background absolute inset-x-0 bottom-full"
+              style={[{ height: headerHeight }, headerBackdropStyle]}
+            />
+            <TabsList variant="line">
+              {tabs.map(({ value, label }) => (
+                <TabsTrigger key={value} value={value}>
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Animated.View>
+
+          {/* Høyt nok til at fanene blir stående festet også når den nye fanen er kort. */}
+          <View className="p-4" style={{ minHeight: windowHeight - headerHeight - tabBarHeight }}>
             <TabsContent value="arrangementer">
-              <EventsTab groupId={group.id} />
+              <TabPanel direction={direction}>
+                <EventsTab groupId={group.id} />
+              </TabPanel>
             </TabsContent>
             <TabsContent value="kunngjoringer">
-              <AnnouncementsTab groupId={group.id} />
+              <TabPanel direction={direction}>
+                <AnnouncementsTab groupId={group.id} />
+              </TabPanel>
             </TabsContent>
             <TabsContent value="avstemninger">
-              <PollsTab groupId={group.id} />
+              <TabPanel direction={direction}>
+                <PollsTab groupId={group.id} />
+              </TabPanel>
             </TabsContent>
             {!group.parentId && (
               <TabsContent value="boter">
-                <FinesTab group={group} />
+                <TabPanel direction={direction}>
+                  <FinesTab group={group} />
+                </TabPanel>
               </TabsContent>
             )}
             <TabsContent value="betalinger">
-              <PaymentsTab groupId={group.id} manage={manage} />
+              <TabPanel direction={direction}>
+                <PaymentsTab groupId={group.id} manage={manage} />
+              </TabPanel>
             </TabsContent>
             <TabsContent value="filer">
-              <FilesTab groupId={group.id} />
+              <TabPanel direction={direction}>
+                <FilesTab groupId={group.id} />
+              </TabPanel>
             </TabsContent>
             <TabsContent value="statistikk">
-              <StatsTab group={group} />
+              <TabPanel direction={direction}>
+                <StatsTab group={group} />
+              </TabPanel>
             </TabsContent>
           </View>
-        </ScrollView>
+        </Animated.ScrollView>
       </Tabs>
     </>
   );
