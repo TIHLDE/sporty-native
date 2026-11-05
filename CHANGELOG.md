@@ -28,6 +28,23 @@ Kopier denne blokken til toppen av listen under, og ta bare med kategoriene som 
 
 ---
 
+## 2026-11-05
+
+### ♻️ Endret
+
+- **Nye faner på gruppesiden**: fanene ser ut som på nettsiden, med tekst og en strek som glir til den aktive fanen, og innholdet tones inn fra siden du bytter mot. Fanen du velger, scrolles automatisk inn i raden
+- **Samme faner på arrangementssiden**: Kommer, Ikke svart og Nei har samme utseende og animasjon som på gruppesiden, og fester seg under headeren når du scroller
+- **Animert bytte i Statistikk**: pillen glir mellom Meg, Laget og Admin, og innholdet tones inn fra siden du bytter mot
+- **Ny oppstartsanimasjon**: logoen zoomer mot deg og åpner appen, i stedet for at appen bare dukker opp
+- **Stengte avstemninger er foldet sammen**: i Avstemninger-fanen viser de bare spørsmålet og kan åpnes for å se resultatet
+- **Fanelinjen minimeres ikke lenger**: alle fanene blir stående når du scroller, i stedet for at linjen krymper til én knapp
+- **Fanelinjen er ikke lenger blå**: valgt fane vises med fylt ikon, hvitt i mørk modus og svart i lys
+
+### 🐛 Fix
+
+- Fanene på gruppesiden fester seg nå under headeren i stedet for bak statuslinjen og tilbakeknappen
+- Logoen i oppstartsanimasjonen ble kuttet øverst og nederst. Den vises nå i full høyde, samme størrelse som splash-skjermen
+
 ## 2026-10-14 (backend flyttet til Sporty v3)
 
 ### ♻️ Endret

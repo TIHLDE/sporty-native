@@ -2,64 +2,79 @@ import { Image } from 'expo-image';
 import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
-import Animated, { Easing, Keyframe } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  Keyframe,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
 const DURATION = 600;
 
-export function AnimatedSplashOverlay() {
-  const [animate, setAnimate] = useState(false);
+const reduceMotion = ReduceMotion.System;
+const LOGO_EASING = Easing.bezier(0.7, 0, 0.3, 1);
+const LOGO_PULL_BACK = { duration: 117, easing: LOGO_EASING, reduceMotion };
+const LOGO_ZOOM = { duration: 533, easing: LOGO_EASING, reduceMotion };
+const OVERLAY_FADE = { duration: 300, reduceMotion };
+const APP_SETTLE = { duration: 700, easing: Easing.bezier(0.4, 0, 0.1, 1), reduceMotion };
+
+/** Appen starter litt større og synker på plass mens logoen zoomer forbi. */
+export const APP_ENTRANCE_SCALE = 1.08;
+
+/**
+ * Overgangen fra den native splash-skjermen: logoen trekker seg litt sammen, zoomer mot brukeren og
+ * åpner appen. `appScale` styrer appen bak, se `APP_ENTRANCE_SCALE`.
+ */
+export function AnimatedSplashOverlay({ appScale }: { appScale: SharedValue<number> }) {
   const [visible, setVisible] = useState(true);
+  const overlayOpacity = useSharedValue(1);
+  const logoOpacity = useSharedValue(1);
+  const logoScale = useSharedValue(1);
+
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.get() }));
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.get(),
+    transform: [{ scale: logoScale.get() }],
+  }));
+
+  function animateOut() {
+    logoScale.set(
+      withSequence(
+        withTiming(0.9, LOGO_PULL_BACK),
+        withTiming(9, LOGO_ZOOM, (finished) => {
+          'worklet';
+          if (finished) {
+            scheduleOnRN(setVisible, false);
+          }
+        })
+      )
+    );
+    logoOpacity.set(withDelay(LOGO_PULL_BACK.duration, withTiming(0, LOGO_ZOOM)));
+    overlayOpacity.set(withDelay(300, withTiming(0, OVERLAY_FADE)));
+    appScale.set(withDelay(150, withTiming(1, APP_SETTLE)));
+  }
 
   if (!visible) return null;
 
-  const splashKeyframe = new Keyframe({
-    0: {
-      transform: [{ scale: 1 }],
-      opacity: 1,
-    },
-    20: {
-      opacity: 1,
-    },
-    70: {
-      opacity: 0,
-      easing: Easing.elastic(0.7),
-    },
-    100: {
-      opacity: 0,
-      transform: [{ scale: 1 }],
-      easing: Easing.elastic(0.7),
-    },
-  });
-
-  // Samme bilde, størrelse og farge som den native splash-skjermen (expo-splash-screen i app.json),
-  // så overgangen ikke synes.
-  const image = (
-    <Image style={styles.splashImage} source={require('@/assets/images/splash-icon.png')} />
-  );
-
-  return animate ? (
+  return (
     <Animated.View
-      entering={splashKeyframe.duration(DURATION).withCallback((finished) => {
-        'worklet';
-        if (finished) {
-          scheduleOnRN(setVisible, false);
-        }
-      })}
-      style={styles.splashOverlay}>
-      {image}
-    </Animated.View>
-  ) : (
-    <View
+      // Samme bilde, størrelse og farge som den native splash-skjermen (expo-splash-screen i
+      // app.json), så overgangen ikke synes.
       onLayout={() => {
-        SplashScreen.hideAsync().finally(() => {
-          setAnimate(true);
-        });
+        SplashScreen.hideAsync().finally(animateOut);
       }}
-      style={styles.splashOverlay}>
-      {image}
-    </View>
+      style={[styles.splashOverlay, overlayStyle]}>
+      <Animated.View style={logoStyle}>
+        <Image style={styles.splashImage} source={require('@/assets/images/splash-icon.png')} />
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -144,7 +159,7 @@ const styles = StyleSheet.create({
   },
   splashImage: {
     width: 200,
-    height: 155,
+    height: 200,
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,

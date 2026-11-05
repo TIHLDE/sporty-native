@@ -1,4 +1,5 @@
 import { Link, Stack, router, useLocalSearchParams } from "expo-router";
+import { useHeaderHeight } from "expo-router/react-navigation";
 import {
   CalendarDays,
   Check,
@@ -10,8 +11,14 @@ import {
   Users,
   X,
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
 import {
   CollectiveFineButton,
@@ -30,7 +37,15 @@ import { UserRow } from "@/components/sporty/user-row";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  TabPanel,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  getTabDirection,
+  type TabDirection,
+} from "@/components/ui/tabs";
 import { Text } from "@/components/ui/text";
 import {
   useEvent,
@@ -48,6 +63,8 @@ import {
 } from "@/lib/dates";
 import { EVENT_TYPE_LABEL, locationLabel } from "@/lib/events";
 import { cn } from "@/lib/utils";
+
+const ATTENDANCE_TABS = ["kommer", "ubesvart", "kommer_ikke"];
 
 /** Arrangementssiden. Brukes av både Hjem- og Grupper-fanen, så den skyves inn i fanen man står i. */
 export function EventScreen() {
@@ -70,6 +87,13 @@ function EventDetails({ event }: { event: Event }) {
   const group = useGroup(event.groupId);
   const setAttendance = useSetAttendance(event.id);
   const [tab, setTab] = useState("kommer");
+  const [direction, setDirection] = useState<TabDirection>(0);
+  const headerHeight = useHeaderHeight();
+  const { height: windowHeight } = useWindowDimensions();
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  // Hvor fanene står i innholdet. De fester seg når man har scrollet hit.
+  const [tabBar, setTabBar] = useState({ y: 0, height: 0 });
   const now = new Date();
   const isPast = new Date(event.end ?? event.start) < now;
   const deadlinePassed =
@@ -122,6 +146,16 @@ function EventDetails({ event }: { event: Event }) {
   const absenceReasons = event.absenceReasons ?? {};
   const myReason = absenceReasons[userId] ?? "N/A";
 
+  function changeTab(next: string) {
+    setDirection(getTabDirection(ATTENDANCE_TABS, tab, next));
+    setTab(next);
+
+    // Står fanene festet, starter den nye fanen fra toppen i stedet for midt i listen.
+    if (scrollY.current > tabBar.y) {
+      scrollRef.current?.scrollTo({ y: tabBar.y, animated: false });
+    }
+  }
+
   return (
     <>
       <Stack.Screen
@@ -147,171 +181,195 @@ function EventDetails({ event }: { event: Event }) {
             ) : null,
         }}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerClassName="gap-6 p-4 pb-32"
-      >
-        <View className="gap-3">
-          <Text className="text-muted-foreground text-sm">
-            {event.groupName}
-          </Text>
-          <Text variant="h3">{event.title}</Text>
-          <InfoLine icon={Tag} text={EVENT_TYPE_LABEL[event.type]} />
-          {event.opponent && (
-            <InfoLine icon={Swords} text={`Mot ${event.opponent}`} />
-          )}
-          <InfoLine
-            icon={CalendarDays}
-            text={formatEventRange(event.start, event.end)}
-          />
-          {event.meetupAt && (
-            <InfoLine
-              icon={Users}
-              text={`Oppmøte ${formatEventStart(event.meetupAt)}`}
-            />
-          )}
-          <InfoLine icon={MapPin} text={locationLabel(event.location)} />
-          {event.signupDeadline && (
-            <InfoLine
-              icon={Hourglass}
-              text={`${deadlinePassed ? "Påmeldingen stengte" : "Påmeldingsfrist"} ${formatEventStart(event.signupDeadline)}`}
-            />
-          )}
-          {event.description ? (
-            <Text className="leading-6">{event.description}</Text>
-          ) : null}
-        </View>
-
-        {event.type === "kamp" && !notStarted && (
-          <MatchFactsSection event={event} />
-        )}
-
-        <EventMap location={event.location} />
-
-        {!isPast && isMember && deadlinePassed && (
-          <Text className="text-muted-foreground text-center text-sm">
-            Påmeldingsfristen har gått ut. Ta kontakt med sub-/admin hvis du må
-            endre svaret.
-          </Text>
-        )}
-        {!isPast && isMember && !deadlinePassed && (
-          <View className="flex-row gap-3">
-            <Button
-              disabled={full}
-              className={cn(
-                "flex-1 rounded-full",
-                myStatus === "kommer" && "bg-green-600 active:bg-green-700",
-              )}
-              variant={myStatus === "kommer" ? "default" : "outline"}
-              onPress={comeAnyway}
-            >
-              <Icon
-                as={Check}
-                size={16}
-                className={myStatus === "kommer" ? "text-white" : undefined}
-              />
-              <Text
-                className={myStatus === "kommer" ? "text-white" : undefined}
-              >
-                {full ? "Fullt" : "Kommer"}
+      <Tabs value={tab} onValueChange={changeTab} className="flex-1 gap-0">
+        <ScrollView
+          ref={scrollRef}
+          stickyHeaderIndices={[1]}
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerClassName="pb-32"
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            scrollY.current = e.nativeEvent.contentOffset.y;
+          }}
+        >
+          <View className="gap-6 p-4 pb-1">
+            <View className="gap-3">
+              <Text className="text-muted-foreground text-sm">
+                {event.groupName}
               </Text>
-            </Button>
-            <Button
-              className={cn(
-                "flex-1 rounded-full",
-                myStatus === "kommer_ikke" && "bg-red-600 active:bg-red-700",
+              <Text variant="h3">{event.title}</Text>
+              <InfoLine icon={Tag} text={EVENT_TYPE_LABEL[event.type]} />
+              {event.opponent && (
+                <InfoLine icon={Swords} text={`Mot ${event.opponent}`} />
               )}
-              variant={myStatus === "kommer_ikke" ? "default" : "outline"}
-              onPress={sendRegrets}
-            >
-              <Icon
-                as={X}
-                size={16}
-                className={
-                  myStatus === "kommer_ikke" ? "text-white" : undefined
-                }
+              <InfoLine
+                icon={CalendarDays}
+                text={formatEventRange(event.start, event.end)}
               />
-              <Text
-                className={
-                  myStatus === "kommer_ikke" ? "text-white" : undefined
-                }
-              >
-                Kommer ikke
+              {event.meetupAt && (
+                <InfoLine
+                  icon={Users}
+                  text={`Oppmøte ${formatEventStart(event.meetupAt)}`}
+                />
+              )}
+              <InfoLine icon={MapPin} text={locationLabel(event.location)} />
+              {event.signupDeadline && (
+                <InfoLine
+                  icon={Hourglass}
+                  text={`${deadlinePassed ? "Påmeldingen stengte" : "Påmeldingsfrist"} ${formatEventStart(event.signupDeadline)}`}
+                />
+              )}
+              {event.description ? (
+                <Text className="leading-6">{event.description}</Text>
+              ) : null}
+            </View>
+
+            {event.type === "kamp" && !notStarted && (
+              <MatchFactsSection event={event} />
+            )}
+
+            <EventMap location={event.location} />
+
+            {!isPast && isMember && deadlinePassed && (
+              <Text className="text-muted-foreground text-center text-sm">
+                Påmeldingsfristen har gått ut. Ta kontakt med sub-/admin hvis du
+                må endre svaret.
               </Text>
-            </Button>
+            )}
+            {!isPast && isMember && !deadlinePassed && (
+              <View className="flex-row gap-3">
+                <Button
+                  disabled={full}
+                  className={cn(
+                    "flex-1 rounded-full",
+                    myStatus === "kommer" && "bg-green-600 active:bg-green-700",
+                  )}
+                  variant={myStatus === "kommer" ? "default" : "outline"}
+                  onPress={comeAnyway}
+                >
+                  <Icon
+                    as={Check}
+                    size={16}
+                    className={myStatus === "kommer" ? "text-white" : undefined}
+                  />
+                  <Text
+                    className={myStatus === "kommer" ? "text-white" : undefined}
+                  >
+                    {full ? "Fullt" : "Kommer"}
+                  </Text>
+                </Button>
+                <Button
+                  className={cn(
+                    "flex-1 rounded-full",
+                    myStatus === "kommer_ikke" &&
+                      "bg-red-600 active:bg-red-700",
+                  )}
+                  variant={myStatus === "kommer_ikke" ? "default" : "outline"}
+                  onPress={sendRegrets}
+                >
+                  <Icon
+                    as={X}
+                    size={16}
+                    className={
+                      myStatus === "kommer_ikke" ? "text-white" : undefined
+                    }
+                  />
+                  <Text
+                    className={
+                      myStatus === "kommer_ikke" ? "text-white" : undefined
+                    }
+                  >
+                    Kommer ikke
+                  </Text>
+                </Button>
+              </View>
+            )}
+            {!isPast && isMember && myStatus === "kommer_ikke" && myReason && (
+              <Text className="text-muted-foreground -mt-2 text-center text-sm">
+                Din begrunnelse: {myReason}
+                {!deadlinePassed && " · trykk «Kommer ikke» for å endre"}
+              </Text>
+            )}
+            {!isPast && missingMyPosition && (
+              <ChoosePositionPrompt groupId={event.groupId} />
+            )}
+
+            <Text variant="h4">Deltakere</Text>
           </View>
-        )}
-        {!isPast && isMember && myStatus === "kommer_ikke" && myReason && (
-          <Text className="text-muted-foreground -mt-2 text-center text-sm">
-            Din begrunnelse: {myReason}
-            {!deadlinePassed && " · trykk «Kommer ikke» for å endre"}
-          </Text>
-        )}
-        {!isPast && missingMyPosition && (
-          <ChoosePositionPrompt groupId={event.groupId} />
-        )}
 
-        <View className="gap-3">
-          <Text variant="h4">Deltakere</Text>
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="w-full">
-              <TabsTrigger value="kommer" className="flex-1">
-                <Text>
-                  Kommer ({kommer.length}
-                  {event.maxAttendees !== null && `/${event.maxAttendees}`})
-                </Text>
+          <View onLayout={(e) => setTabBar(e.nativeEvent.layout)}>
+            <TabsList variant="line">
+              <TabsTrigger value="kommer">
+                Kommer ({kommer.length}
+                {event.maxAttendees !== null && `/${event.maxAttendees}`})
               </TabsTrigger>
-              <TabsTrigger value="ubesvart" className="flex-1">
-                <Text>Ikke svart ({ubesvart.length})</Text>
+              <TabsTrigger value="ubesvart">
+                Ikke svart ({ubesvart.length})
               </TabsTrigger>
-              <TabsTrigger value="kommer_ikke" className="flex-1">
-                <Text>Nei ({kommerIkke.length})</Text>
+              <TabsTrigger value="kommer_ikke">
+                Nei ({kommerIkke.length})
               </TabsTrigger>
             </TabsList>
+          </View>
+
+          {/* Høyt nok til at fanene blir stående festet også når den nye listen er kort. */}
+          <View
+            className="gap-6 p-4"
+            style={{ minHeight: windowHeight - headerHeight - tabBar.height }}
+          >
             <TabsContent value="kommer">
-              {positions.length > 0 ? (
-                <ParticipantsByPosition
-                  userIds={kommer}
-                  members={members}
-                  positions={positions}
-                  empty="Ingen har meldt seg på ennå"
-                />
-              ) : (
-                <ParticipantList
-                  userIds={kommer}
-                  members={members}
-                  empty="Ingen har meldt seg på ennå"
-                />
-              )}
+              <TabPanel direction={direction}>
+                {positions.length > 0 ? (
+                  <ParticipantsByPosition
+                    userIds={kommer}
+                    members={members}
+                    positions={positions}
+                    empty="Ingen har meldt seg på ennå"
+                  />
+                ) : (
+                  <ParticipantList
+                    userIds={kommer}
+                    members={members}
+                    empty="Ingen har meldt seg på ennå"
+                  />
+                )}
+              </TabPanel>
             </TabsContent>
             <TabsContent value="ubesvart">
-              <ParticipantList
-                userIds={ubesvart}
-                members={members}
-                // Eldre backend sender ikke seenAt. Da vises ingenting, i stedet for «Ikke sett» på alle.
-                reasons={
-                  event.canManage && event.seenAt
-                    ? seenLabels(event, ubesvart)
-                    : undefined
-                }
-                empty="Alle har svart 🎉"
-              />
+              <TabPanel direction={direction}>
+                <ParticipantList
+                  userIds={ubesvart}
+                  members={members}
+                  // Eldre backend sender ikke seenAt. Da vises ingenting, i stedet for «Ikke sett» på alle.
+                  reasons={
+                    event.canManage && event.seenAt
+                      ? seenLabels(event, ubesvart)
+                      : undefined
+                  }
+                  empty="Alle har svart 🎉"
+                />
+              </TabPanel>
             </TabsContent>
             <TabsContent value="kommer_ikke">
-              <ParticipantList
-                userIds={kommerIkke}
-                members={members}
-                reasons={event.absenceReasons}
-                empty="Ingen har meldt avbud"
-              />
+              <TabPanel direction={direction}>
+                <ParticipantList
+                  userIds={kommerIkke}
+                  members={members}
+                  reasons={event.absenceReasons}
+                  empty="Ingen har meldt avbud"
+                />
+              </TabPanel>
             </TabsContent>
-          </Tabs>
-        </View>
 
-        {canGiveCollectiveFine(event, ubesvart.length, now) && (
-          <CollectiveFineButton eventId={event.id} count={ubesvart.length} />
-        )}
-      </ScrollView>
+            {canGiveCollectiveFine(event, ubesvart.length, now) && (
+              <CollectiveFineButton
+                eventId={event.id}
+                count={ubesvart.length}
+              />
+            )}
+          </View>
+        </ScrollView>
+      </Tabs>
     </>
   );
 }
