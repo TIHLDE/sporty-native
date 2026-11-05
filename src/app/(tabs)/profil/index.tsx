@@ -26,7 +26,7 @@ import type { Role } from '@/data/types';
 import { useReports } from '@/data/moderation';
 import { formatDateLong } from '@/lib/dates';
 import { formatFineCount, isUnpaid } from '@/lib/fines';
-import { PRIVACY_URL } from '@/lib/terms';
+import { PRIVACY_URL, TIHLDE_ACCOUNT_URL } from '@/lib/terms';
 
 const ROLE_LABEL: Record<Role, string> = {
   admin: 'Admin',
@@ -142,6 +142,15 @@ export default function ProfilScreen() {
           className="flex-row items-center gap-3 py-3 active:opacity-70">
           <Icon as={Shield} size={18} />
           <Text className="flex-1">Personvernerklæring</Text>
+          <Icon as={ChevronRight} size={18} className="text-muted-foreground" />
+        </Pressable>
+        <Separator />
+        <Pressable
+          onPress={() => openBrowserAsync(TIHLDE_ACCOUNT_URL)}
+          accessibilityRole="link"
+          className="flex-row items-center gap-3 py-3 active:opacity-70">
+          <Icon as={UserCog} size={18} />
+          <Text className="flex-1">Kontoen din hos TIHLDE</Text>
           <Icon as={ChevronRight} size={18} className="text-muted-foreground" />
         </Pressable>
       </Section>
