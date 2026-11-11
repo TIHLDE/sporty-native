@@ -7,12 +7,12 @@ const MINIFY_FLAGS = {
 
 module.exports = function withAndroidMinify(config) {
   return withGradleProperties(config, (config) => {
-    for (const [name, value] of Object.entries(MINIFY_FLAGS)) {
-      const existing = config.modResults.find((prop) => prop.name === name);
+    for (const [key, value] of Object.entries(MINIFY_FLAGS)) {
+      const existing = config.modResults.find((prop) => prop.key === key);
       if (existing) {
         existing.value = value;
       } else {
-        config.modResults.push({ type: "property", name, value });
+        config.modResults.push({ type: "property", key, value });
       }
     }
     return config;
