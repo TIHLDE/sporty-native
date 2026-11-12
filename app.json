@@ -65,7 +65,8 @@
         {
           "androidGoogleMapsApiKey": "AIzaSyD0ACA9w3m8aAsGiajSGVlTXnWQy7WeWVQ"
         }
-      ]
+      ],
+      "./plugins/with-android-minify.js"
     ],
     "experiments": {
       "typedRoutes": true,
